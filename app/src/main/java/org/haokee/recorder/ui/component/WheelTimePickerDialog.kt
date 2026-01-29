@@ -45,10 +45,13 @@ fun WheelTimePickerDialog(
         YearMonth.of(selectedYear, selectedMonth).lengthOfMonth()
     }
 
-    // Adjust day if it exceeds the days in the selected month
-    LaunchedEffect(daysInMonth) {
-        if (selectedDay > daysInMonth) {
-            selectedDay = daysInMonth
+    // Adjust day immediately to ensure it's always valid
+    val effectiveDay = selectedDay.coerceIn(1, daysInMonth)
+
+    // Update selectedDay state when adjusted
+    LaunchedEffect(effectiveDay) {
+        if (selectedDay != effectiveDay) {
+            selectedDay = effectiveDay
         }
     }
 
@@ -113,7 +116,7 @@ fun WheelTimePickerDialog(
                         // Day picker
                         DrumRollPicker(
                             items = (1..daysInMonth).toList(),
-                            selectedItem = selectedDay,
+                            selectedItem = effectiveDay, // Use adjusted day
                             onItemSelected = { selectedDay = it },
                             modifier = Modifier.weight(1f),
                             cyclic = true,
@@ -245,6 +248,14 @@ fun DrumRollPicker(
             } else {
                 rawIndex.coerceIn(0, items.lastIndex)
             }
+        }
+    }
+
+    // Reset scroll position when key changes (e.g., month changes affecting days)
+    LaunchedEffect(key, initialScrollOffset) {
+        if (!isDragging) {
+            scrollOffset.snapTo(initialScrollOffset)
+            lastNotifiedIndex = -1 // Force update notification
         }
     }
 
