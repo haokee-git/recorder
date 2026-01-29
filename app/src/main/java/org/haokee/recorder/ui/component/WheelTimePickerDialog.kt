@@ -268,12 +268,23 @@ fun DrumRollPicker(
         }
     }
 
-    // Update selected item in real-time
-    LaunchedEffect(currentCenterIndex) {
-        if (currentCenterIndex in items.indices && currentCenterIndex != lastNotifiedIndex) {
-            onItemSelected(items[currentCenterIndex])
-            lastNotifiedIndex = currentCenterIndex
-        }
+    // Update selected item in real-time (using snapshotFlow to ensure updates during animation)
+    LaunchedEffect(Unit) {
+        snapshotFlow { scrollOffset.value }
+            .collect {
+                val rawIndex = (it / itemHeightPx).roundToInt()
+                val index = if (cyclic) {
+                    val moduloIndex = rawIndex % items.size
+                    if (moduloIndex < 0) moduloIndex + items.size else moduloIndex
+                } else {
+                    rawIndex.coerceIn(0, items.lastIndex)
+                }
+
+                if (index in items.indices && index != lastNotifiedIndex) {
+                    onItemSelected(items[index])
+                    lastNotifiedIndex = index
+                }
+            }
     }
 
     // Snap animation when user releases (and not flinging)
@@ -325,30 +336,31 @@ fun DrumRollPicker(
                             change.position
                         )
 
+                        val dragAmount = change.positionChange().y
+                        val newOffset = scrollOffset.value - dragAmount
+
+                        // For non-cyclic, clamp the offset
+                        val clampedOffset = if (cyclic) {
+                            newOffset
+                        } else {
+                            newOffset.coerceIn(0f, (items.size - 1) * itemHeightPx)
+                        }
+
                         scope.launch {
-                            val dragAmount = change.positionChange().y
-                            val newOffset = scrollOffset.value - dragAmount
-
-                            // For non-cyclic, clamp the offset
-                            val clampedOffset = if (cyclic) {
-                                newOffset
-                            } else {
-                                newOffset.coerceIn(0f, (items.size - 1) * itemHeightPx)
-                            }
-
                             scrollOffset.snapTo(clampedOffset)
                         }
                         change.consume()
                     }
-
-                    isDragging = false
 
                     // Calculate velocity and start fling if needed
                     val velocity = velocityTracker.calculateVelocity()
                     val velocityY = -velocity.y // Invert because scroll direction is opposite
 
                     if (abs(velocityY) > 100f) { // Minimum velocity threshold
+                        // Start fling before setting isDragging = false
                         isFling = true
+                        isDragging = false
+
                         scope.launch {
                             // Fling animation
                             scrollOffset.animateDecay(
@@ -369,6 +381,9 @@ fun DrumRollPicker(
 
                             isFling = false
                         }
+                    } else {
+                        // No fling, just end dragging (will trigger snap)
+                        isDragging = false
                     }
                 }
             },
