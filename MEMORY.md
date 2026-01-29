@@ -313,11 +313,22 @@ org/haokee/recorder/
     - 修复拖动松手后无法吸附的问题
     - 使用 snapshotFlow 确保实时更新显示
 
+14. **885be21** - 完全重写为模运算架构（最终版本）
+    - **核心改进**：从像素滚动改为基于项目索引的滚动（scrollIndex）
+    - 移除列表三倍复制（`items + items + items`），使用模运算实现真正的无限循环
+    - 只渲染 ±7 个项目（最多 15 个），通过模运算重用控件
+    - 月份只需 12 个控件，小时只需 24 个，分钟只需 60 个
+    - 修复快速滚动时的空白帧问题
+    - 简化架构，性能显著提升
+    - 关键算法：`actualIndex = ((index % items.size) + items.size) % items.size`
+
 **技术亮点**：
 - 使用 Compose Canvas 绘制自定义 UI
-- LazyColumn + SnapFlingBehavior 实现滚轮效果
-- graphicsLayer 实现渐变动画
-- HapticFeedback 触觉反馈
+- 模运算实现高效无限循环滚动（最少控件数量）
+- Animatable + VelocityTracker 实现流畅惯性滚动
+- graphicsLayer 实现渐变动画（透明度、缩放、字体）
+- HapticFeedback 触觉反馈（CLOCK_TICK）
+- snapshotFlow 实现实时状态同步
 - 协程配合 Flow 实现响应式状态更新
 - 运行时权限管理（Android 13+ 兼容）
 - Core Library Desugaring 兼容低版本 Android
