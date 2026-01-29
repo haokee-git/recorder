@@ -207,7 +207,7 @@ fun RecorderScreen(
 
     // Alarm time picker dialog
     if (showAlarmPicker) {
-        AlarmTimePickerDialog(
+        WheelTimePickerDialog(
             onDismiss = {
                 showAlarmPicker = false
             },

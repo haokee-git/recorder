@@ -10,7 +10,8 @@
       "Bash(java -version:*)",
       "Bash(unset:*)",
       "Bash(./gradlew dependencies:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
