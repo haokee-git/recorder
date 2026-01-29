@@ -1,8 +1,9 @@
 package org.haokee.recorder.ui.component
 
 import android.view.HapticFeedbackConstants
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -13,6 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,6 +27,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.YearMonth
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +92,7 @@ fun WheelTimePickerDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp),
+                            .height(200.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         // Year picker
@@ -113,7 +118,8 @@ fun WheelTimePickerDialog(
                             selectedItem = selectedDay,
                             onItemSelected = { selectedDay = it },
                             modifier = Modifier.weight(1f),
-                            cyclic = true
+                            cyclic = true,
+                            key = "$selectedYear-$selectedMonth-$daysInMonth" // Force recreation when days change
                         )
                     }
                 }
@@ -135,7 +141,7 @@ fun WheelTimePickerDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp),
+                            .height(200.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         // Hour picker
@@ -195,112 +201,149 @@ fun DrumRollPicker(
     selectedItem: Int,
     onItemSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    cyclic: Boolean = false
+    cyclic: Boolean = false,
+    key: String? = null
 ) {
     val view = LocalView.current
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    val visibleItemsCount = 5
+    val itemHeightDp = 40.dp
+    val itemHeightPx = with(density) { itemHeightDp.toPx() }
 
     // Find initial index
-    val initialIndex = items.indexOf(selectedItem).takeIf { it >= 0 } ?: 0
-    val visibleItemsCount = 5
-    val itemHeight = 36.dp
+    val initialIndex = items.indexOf(selectedItem).coerceAtLeast(0)
 
-    // For cyclic scrolling, we need to create an infinite list
-    val displayItems = if (cyclic) {
-        // Repeat items to create infinite scroll effect
-        items + items + items
-    } else {
-        items
+    // For cyclic scrolling, repeat items to create infinite scroll
+    val displayItems = remember(items, cyclic) {
+        if (cyclic) {
+            items + items + items
+        } else {
+            items
+        }
     }
 
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = if (cyclic) {
-            initialIndex + items.size // Start at middle repetition
+    // Calculate initial scroll position
+    val initialScrollOffset = remember(initialIndex, cyclic, key) {
+        if (cyclic) {
+            (initialIndex + items.size) * itemHeightPx
         } else {
-            initialIndex
-        }.coerceAtLeast(0)
-    )
+            initialIndex * itemHeightPx
+        }
+    }
 
-    var lastSelectedIndex by remember { mutableIntStateOf(-1) }
+    // Scroll offset (in pixels)
+    val scrollOffset = remember { Animatable(initialScrollOffset) }
+    var isDragging by remember { mutableStateOf(false) }
+    var lastNotifiedIndex by remember { mutableIntStateOf(-1) }
 
-    // Track scroll position and trigger haptic feedback
-    LaunchedEffect(listState.isScrollInProgress) {
-        snapshotFlow { listState.firstVisibleItemIndex }
-            .collect { index ->
-                if (!listState.isScrollInProgress) {
-                    val centerIndex = index + visibleItemsCount / 2
-                    val actualIndex = if (cyclic) centerIndex % items.size else centerIndex
+    // Calculate current center index based on scroll offset
+    val currentCenterIndex by remember {
+        derivedStateOf {
+            val rawIndex = (scrollOffset.value / itemHeightPx).roundToInt()
+            if (cyclic) {
+                rawIndex % items.size
+            } else {
+                rawIndex.coerceIn(0, items.lastIndex)
+            }
+        }
+    }
 
-                    if (actualIndex in items.indices && actualIndex != lastSelectedIndex) {
-                        lastSelectedIndex = actualIndex
-                        onItemSelected(items[actualIndex])
+    // Update selected item in real-time
+    LaunchedEffect(currentCenterIndex) {
+        if (currentCenterIndex in items.indices && currentCenterIndex != lastNotifiedIndex) {
+            onItemSelected(items[currentCenterIndex])
+            lastNotifiedIndex = currentCenterIndex
+        }
+    }
 
-                        // Trigger vibration
-                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    }
+    // Snap animation when user releases
+    LaunchedEffect(isDragging) {
+        if (!isDragging) {
+            // Calculate target snap position
+            val targetIndex = (scrollOffset.value / itemHeightPx).roundToInt()
+            val targetOffset = targetIndex * itemHeightPx
 
-                    // For cyclic scroll, reset to middle repetition when needed
-                    if (cyclic) {
-                        if (centerIndex < items.size / 2) {
-                            // Scrolled too far up, jump to middle repetition
-                            scope.launch {
-                                listState.scrollToItem(centerIndex + items.size)
-                            }
-                        } else if (centerIndex >= items.size * 2 + items.size / 2) {
-                            // Scrolled too far down, jump to middle repetition
-                            scope.launch {
-                                listState.scrollToItem(centerIndex - items.size)
-                            }
-                        }
-                    }
+            // Animate to snap position
+            scrollOffset.animateTo(
+                targetValue = targetOffset,
+                animationSpec = tween(durationMillis = 200)
+            )
+
+            // Trigger haptic feedback
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+
+            // For cyclic scroll, reset to middle repetition when needed
+            if (cyclic) {
+                val finalIndex = (scrollOffset.value / itemHeightPx).roundToInt()
+                if (finalIndex < items.size / 2) {
+                    // Jumped too far up, reset to middle
+                    scrollOffset.snapTo(scrollOffset.value + items.size * itemHeightPx)
+                } else if (finalIndex >= items.size * 2 + items.size / 2) {
+                    // Jumped too far down, reset to middle
+                    scrollOffset.snapTo(scrollOffset.value - items.size * itemHeightPx)
                 }
             }
+        }
     }
 
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(80.dp),
+            .width(100.dp)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = {
+                        isDragging = true
+                    },
+                    onDragEnd = {
+                        isDragging = false
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        scope.launch {
+                            val newOffset = scrollOffset.value - dragAmount.y
+                            val maxOffset = if (cyclic) {
+                                Float.POSITIVE_INFINITY
+                            } else {
+                                (items.size - 1) * itemHeightPx
+                            }
+                            scrollOffset.snapTo(newOffset.coerceIn(0f, maxOffset))
+                        }
+                    }
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
-        // Center highlight background
+        // Display items
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(itemHeight)
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-        )
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(itemHeight * visibleItemsCount),
-            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+                .height(itemHeightDp * visibleItemsCount)
         ) {
-            // Add padding items at top
-            items(visibleItemsCount / 2) {
-                Spacer(modifier = Modifier.height(itemHeight))
-            }
+            val centerY = (visibleItemsCount / 2) * itemHeightPx
+            val startIndex = ((scrollOffset.value / itemHeightPx) - visibleItemsCount / 2).toInt().coerceAtLeast(0)
+            val endIndex = (startIndex + visibleItemsCount + 2).coerceAtMost(displayItems.size)
 
-            // Display items
-            items(displayItems.size) { index ->
+            for (index in startIndex until endIndex) {
+                if (index !in displayItems.indices) continue
+
                 val item = displayItems[index]
-                val offsetFromCenter = (index - listState.firstVisibleItemIndex) - (visibleItemsCount / 2)
+                val itemY = index * itemHeightPx - scrollOffset.value + centerY
+
+                // Calculate offset from center (in item units)
+                val offsetFromCenter = (itemY - centerY) / itemHeightPx
 
                 PickerItem(
                     value = item,
                     offsetFromCenter = offsetFromCenter,
-                    itemHeight = itemHeight
+                    itemHeight = itemHeightDp,
+                    yPosition = itemY
                 )
-            }
-
-            // Add padding items at bottom
-            items(visibleItemsCount / 2) {
-                Spacer(modifier = Modifier.height(itemHeight))
             }
         }
     }
@@ -309,52 +352,53 @@ fun DrumRollPicker(
 @Composable
 fun PickerItem(
     value: Int,
-    offsetFromCenter: Int,
-    itemHeight: androidx.compose.ui.unit.Dp
+    offsetFromCenter: Float,
+    itemHeight: androidx.compose.ui.unit.Dp,
+    yPosition: Float
 ) {
-    val absOffset = abs(offsetFromCenter).toFloat()
+    val absOffset = abs(offsetFromCenter)
 
-    // Calculate scale and alpha based on distance from center
-    val scale = when {
-        absOffset == 0f -> 1.0f
-        absOffset == 1f -> 0.7f
-        absOffset == 2f -> 0.5f
-        else -> 0.3f
-    }
+    // Smooth interpolation for scale (1.0 at center, 0.5 at ±2)
+    val scale = (1.0f - absOffset * 0.25f).coerceIn(0.5f, 1.0f)
 
-    val alpha = when {
-        absOffset == 0f -> 1.0f
-        absOffset == 1f -> 0.6f
-        absOffset == 2f -> 0.4f
-        else -> 0.2f
-    }
+    // Smooth interpolation for alpha (1.0 at center, 0.3 at ±2)
+    val alpha = (1.0f - absOffset * 0.35f).coerceIn(0.3f, 1.0f)
 
-    val color = when {
-        absOffset == 0f -> Color.Black
-        absOffset == 1f -> Color.Gray
-        else -> Color.LightGray
-    }
+    // Color interpolation from Black to LightGray
+    val color = lerp(
+        Color.Black,
+        Color.LightGray,
+        (absOffset * 0.5f).coerceIn(0f, 1f)
+    )
 
+    // Font weight based on distance
     val fontWeight = when {
-        absOffset == 0f -> FontWeight.Bold
-        absOffset == 1f -> FontWeight.Medium
+        absOffset < 0.5f -> FontWeight.Bold
+        absOffset < 1.5f -> FontWeight.Medium
         else -> FontWeight.Normal
     }
 
-    Text(
-        text = String.format("%02d", value),
+    // Base font size is 28sp, scales from 28sp (center) to 14sp (far)
+    val fontSize = (28f * scale).sp
+
+    Box(
         modifier = Modifier
-            .height(itemHeight)
             .fillMaxWidth()
-            .wrapContentHeight()
+            .height(itemHeight)
             .graphicsLayer {
+                translationY = yPosition - (itemHeight.toPx() / 2)
                 scaleX = scale
                 scaleY = scale
                 this.alpha = alpha
             },
-        fontSize = (20 * scale).sp,
-        fontWeight = fontWeight,
-        color = color,
-        textAlign = TextAlign.Center
-    )
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (value >= 100) String.format("%04d", value) else String.format("%02d", value),
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            color = color,
+            textAlign = TextAlign.Center
+        )
+    }
 }
