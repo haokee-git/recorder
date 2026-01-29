@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(.gradlew.bat assembleDebug --stacktrace)",
+      "Bash(gradlew.bat:*)",
+      "Bash(Select-Object -Last 100)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(where:*)",
+      "Bash(java -version:*)",
+      "Bash(unset:*)",
+      "Bash(./gradlew dependencies:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
