@@ -32,6 +32,8 @@ class AlarmReceiver : BroadcastReceiver() {
             ).apply {
                 description = "感言闹钟提醒"
                 enableVibration(true)
+                enableLights(true)
+                setShowBadge(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -51,13 +53,16 @@ class AlarmReceiver : BroadcastReceiver() {
 
         // Build notification
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm) // Use system alarm icon
             .setContentTitle(title)
             .setContentText("点击查看您的感言")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sound, vibration, lights
+            .setVibrate(longArrayOf(0, 500, 200, 500)) // Vibration pattern
+            .setFullScreenIntent(pendingIntent, true) // Show as full screen on lock screen
             .build()
 
         notificationManager.notify(thoughtId.hashCode(), notification)

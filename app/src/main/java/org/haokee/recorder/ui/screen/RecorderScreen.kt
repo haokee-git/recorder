@@ -44,6 +44,26 @@ fun RecorderScreen(
         permission = Manifest.permission.RECORD_AUDIO
     )
 
+    // Notification permission for Android 13+
+    val notificationPermissionState = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        rememberPermissionState(
+            permission = Manifest.permission.POST_NOTIFICATIONS
+        )
+    } else {
+        null
+    }
+
+    // Request notification permission on first composition if needed
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionState?.let {
+                if (!it.status.isGranted && !it.status.shouldShowRationale) {
+                    it.launchPermissionRequest()
+                }
+            }
+        }
+    }
+
     // Show error messages
     LaunchedEffect(uiState.error) {
         uiState.error?.let { error ->
@@ -239,7 +259,7 @@ fun RecorderScreen(
         )
     }
 
-    // Permission rationale dialog
+    // Permission rationale dialog for recording
     if (!recordAudioPermissionState.status.isGranted && recordAudioPermissionState.status.shouldShowRationale) {
         AlertDialog(
             onDismissRequest = { /* Do nothing */ },
@@ -256,6 +276,29 @@ fun RecorderScreen(
                 }
             }
         )
+    }
+
+    // Permission rationale dialog for notifications (Android 13+)
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        notificationPermissionState?.let { permissionState ->
+            if (!permissionState.status.isGranted && permissionState.status.shouldShowRationale) {
+                AlertDialog(
+                    onDismissRequest = { /* Do nothing */ },
+                    title = { Text("需要通知权限") },
+                    text = { Text("此应用需要通知权限来在闹钟时间到达时提醒您。") },
+                    confirmButton = {
+                        TextButton(onClick = { permissionState.launchPermissionRequest() }) {
+                            Text("授予权限")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { /* Do nothing */ }) {
+                            Text("取消")
+                        }
+                    }
+                )
+            }
+        }
     }
 
     // Clear selection on back press
