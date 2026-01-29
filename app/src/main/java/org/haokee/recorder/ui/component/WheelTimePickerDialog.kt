@@ -122,11 +122,11 @@ fun WheelTimePickerDialog(
                         // Day picker
                         DrumRollPicker(
                             items = (1..daysInMonth).toList(),
-                            selectedItem = effectiveDay, // Use adjusted day
+                            selectedItem = effectiveDay,
                             onItemSelected = { selectedDay = it },
                             modifier = Modifier.weight(1f),
                             cyclic = true,
-                            key = "$selectedYear-$selectedMonth-$daysInMonth" // Force recreation when days change
+                            key = "$selectedYear-$selectedMonth-$daysInMonth"
                         )
                     }
                 }
@@ -222,98 +222,56 @@ fun DrumRollPicker(
     // Find initial index
     val initialIndex = items.indexOf(selectedItem).coerceAtLeast(0)
 
-    // For cyclic scrolling, repeat items to create infinite scroll
-    val displayItems = remember(items, cyclic, key) {
-        if (cyclic) {
-            items + items + items
-        } else {
-            items
-        }
-    }
+    // Calculate initial scroll offset (in item units, not pixels)
+    val initialScrollIndex = remember(initialIndex, key) { initialIndex.toFloat() }
 
-    // Calculate initial scroll position
-    val initialScrollOffset = remember(initialIndex, cyclic, key, items.size) {
-        if (cyclic) {
-            (initialIndex + items.size) * itemHeightPx
-        } else {
-            initialIndex * itemHeightPx
-        }
-    }
-
-    // Scroll offset (in pixels)
-    val scrollOffset = remember(key) { Animatable(initialScrollOffset) }
+    // Scroll offset in item units (can be any value for cyclic mode)
+    val scrollIndex = remember(key) { Animatable(initialScrollIndex) }
     var isDragging by remember { mutableStateOf(false) }
     var isFling by remember { mutableStateOf(false) }
-    var lastNotifiedIndex by remember { mutableIntStateOf(-1) }
+    var lastNotifiedValue by remember { mutableIntStateOf(-1) }
 
-    // Calculate current center index based on scroll offset
-    val currentCenterIndex by remember {
-        derivedStateOf {
-            val rawIndex = (scrollOffset.value / itemHeightPx).roundToInt()
-            if (cyclic) {
-                val moduloIndex = rawIndex % items.size
-                // Handle negative modulo
-                if (moduloIndex < 0) moduloIndex + items.size else moduloIndex
-            } else {
-                rawIndex.coerceIn(0, items.lastIndex)
-            }
-        }
-    }
+    // Convert item units to pixels for rendering
+    val scrollOffset by remember { derivedStateOf { scrollIndex.value * itemHeightPx } }
 
-    // Reset scroll position when key changes (e.g., month changes affecting days)
-    LaunchedEffect(key, initialScrollOffset) {
+    // Reset scroll position when key changes
+    LaunchedEffect(key, initialScrollIndex) {
         if (!isDragging && !isFling) {
-            scrollOffset.snapTo(initialScrollOffset)
-            lastNotifiedIndex = -1 // Force update notification
+            scrollIndex.snapTo(initialScrollIndex)
+            lastNotifiedValue = -1
         }
     }
 
-    // Update selected item in real-time (using snapshotFlow to ensure updates during animation)
+    // Update selected item in real-time
     LaunchedEffect(key, items.size) {
-        snapshotFlow { scrollOffset.value }
-            .collect {
-                val rawIndex = (it / itemHeightPx).roundToInt()
-                val index = if (cyclic) {
-                    val moduloIndex = rawIndex % items.size
-                    if (moduloIndex < 0) moduloIndex + items.size else moduloIndex
+        snapshotFlow { scrollIndex.value }
+            .collect { indexFloat ->
+                val roundedIndex = indexFloat.roundToInt()
+                val actualIndex = if (cyclic) {
+                    // Modulo operation handling negative numbers
+                    val mod = roundedIndex % items.size
+                    if (mod < 0) mod + items.size else mod
                 } else {
-                    rawIndex.coerceIn(0, items.lastIndex)
+                    roundedIndex.coerceIn(0, items.lastIndex)
                 }
 
-                if (index in items.indices && index != lastNotifiedIndex) {
-                    onItemSelected(items[index])
-                    lastNotifiedIndex = index
+                val actualValue = items[actualIndex]
+                if (actualValue != lastNotifiedValue) {
+                    onItemSelected(actualValue)
+                    lastNotifiedValue = actualValue
                 }
             }
     }
 
-    // Snap animation when user releases (and not flinging)
+    // Snap animation when user releases
     LaunchedEffect(isDragging, isFling) {
         if (!isDragging && !isFling) {
-            // Calculate target snap position
-            val targetIndex = (scrollOffset.value / itemHeightPx).roundToInt()
-            val targetOffset = targetIndex * itemHeightPx
-
-            // Animate to snap position
-            scrollOffset.animateTo(
-                targetValue = targetOffset,
+            val targetIndex = scrollIndex.value.roundToInt()
+            scrollIndex.animateTo(
+                targetValue = targetIndex.toFloat(),
                 animationSpec = tween(durationMillis = 200)
             )
-
-            // Trigger haptic feedback
             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-
-            // For cyclic scroll, reset to middle repetition when needed
-            if (cyclic) {
-                val finalIndex = (scrollOffset.value / itemHeightPx).roundToInt()
-                if (finalIndex < items.size / 2) {
-                    // Jumped too far up, reset to middle
-                    scrollOffset.snapTo(scrollOffset.value + items.size * itemHeightPx)
-                } else if (finalIndex >= items.size * 2 + items.size / 2) {
-                    // Jumped too far down, reset to middle
-                    scrollOffset.snapTo(scrollOffset.value - items.size * itemHeightPx)
-                }
-            }
         }
     }
 
@@ -331,58 +289,52 @@ fun DrumRollPicker(
                     velocityTracker.resetTracking()
 
                     drag(down.id) { change ->
-                        velocityTracker.addPosition(
-                            change.uptimeMillis,
-                            change.position
-                        )
+                        velocityTracker.addPosition(change.uptimeMillis, change.position)
 
                         val dragAmount = change.positionChange().y
-                        val newOffset = scrollOffset.value - dragAmount
+                        val dragInItems = -dragAmount / itemHeightPx
+                        val newIndex = scrollIndex.value + dragInItems
 
-                        // For non-cyclic, clamp the offset
-                        val clampedOffset = if (cyclic) {
-                            newOffset
+                        // For non-cyclic, clamp the index
+                        val clampedIndex = if (cyclic) {
+                            newIndex
                         } else {
-                            newOffset.coerceIn(0f, (items.size - 1) * itemHeightPx)
+                            newIndex.coerceIn(0f, items.lastIndex.toFloat())
                         }
 
                         scope.launch {
-                            scrollOffset.snapTo(clampedOffset)
+                            scrollIndex.snapTo(clampedIndex)
                         }
                         change.consume()
                     }
 
                     // Calculate velocity and start fling if needed
                     val velocity = velocityTracker.calculateVelocity()
-                    val velocityY = -velocity.y // Invert because scroll direction is opposite
+                    val velocityY = -velocity.y / itemHeightPx // Convert to items per second
 
-                    if (abs(velocityY) > 100f) { // Minimum velocity threshold
-                        // Start fling before setting isDragging = false
+                    if (abs(velocityY) > 100f / itemHeightPx) {
                         isFling = true
                         isDragging = false
 
                         scope.launch {
-                            // Fling animation
-                            scrollOffset.animateDecay(
+                            scrollIndex.animateDecay(
                                 initialVelocity = velocityY,
                                 animationSpec = exponentialDecay(
                                     frictionMultiplier = 3f,
-                                    absVelocityThreshold = 50f
+                                    absVelocityThreshold = 50f / itemHeightPx
                                 )
                             )
 
-                            // Clamp to valid range after animation completes (for non-cyclic)
+                            // Clamp for non-cyclic after fling
                             if (!cyclic) {
-                                val maxOffset = (items.size - 1) * itemHeightPx
-                                if (scrollOffset.value < 0f || scrollOffset.value > maxOffset) {
-                                    scrollOffset.snapTo(scrollOffset.value.coerceIn(0f, maxOffset))
+                                if (scrollIndex.value < 0f || scrollIndex.value > items.lastIndex) {
+                                    scrollIndex.snapTo(scrollIndex.value.coerceIn(0f, items.lastIndex.toFloat()))
                                 }
                             }
 
                             isFling = false
                         }
                     } else {
-                        // No fling, just end dragging (will trigger snap)
                         isDragging = false
                     }
                 }
@@ -394,25 +346,31 @@ fun DrumRollPicker(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(itemHeightDp * visibleItemsCount)
-                .clipToBounds() // Clip to bounds to hide overflow
+                .clipToBounds()
         ) {
-            val centerY = (visibleItemsCount / 2) * itemHeightPx
+            val centerY = (visibleItemsCount / 2f) * itemHeightPx
+            val centerIndex = scrollIndex.value.toInt()
 
-            // Expand render range to handle fast scrolling (±10 items)
-            val centerIndex = (scrollOffset.value / itemHeightPx).toInt()
-            val startIndex = (centerIndex - 10).coerceAtLeast(0)
-            val endIndex = (centerIndex + 11).coerceAtMost(displayItems.size)
+            // Only render ±7 items around center (total 15 items max)
+            for (offset in -7..7) {
+                val index = centerIndex + offset
 
-            for (index in startIndex until endIndex) {
-                if (index !in displayItems.indices) continue
+                // For cyclic mode, use modulo to get actual item
+                val actualIndex = if (cyclic) {
+                    val mod = index % items.size
+                    if (mod < 0) mod + items.size else mod
+                } else {
+                    if (index !in items.indices) continue
+                    index
+                }
 
-                val item = displayItems[index]
-                val itemY = index * itemHeightPx - scrollOffset.value + centerY
+                val item = items[actualIndex]
+                val itemY = (index - scrollIndex.value) * itemHeightPx + centerY
 
-                // Calculate offset from center (in item units)
-                val offsetFromCenter = (itemY - centerY) / itemHeightPx
+                // Calculate offset from center
+                val offsetFromCenter = (index - scrollIndex.value)
 
-                // Only render if within ±2.5 range (visible area)
+                // Only render if within visible range (±2.5)
                 if (abs(offsetFromCenter) <= 2.5f) {
                     PickerItem(
                         value = item,
@@ -468,14 +426,14 @@ fun PickerItem(
             .fillMaxWidth()
             .height(itemHeight)
             .graphicsLayer {
-                translationY = yPosition - (itemHeight.toPx() / 2)
+                translationY = yPosition
                 scaleX = scale
                 scaleY = scale
                 this.alpha = alpha
             },
         contentAlignment = Alignment.Center
     ) {
-        if (alpha > 0f) { // Only render if visible
+        if (alpha > 0f) {
             Text(
                 text = if (value >= 100) String.format("%04d", value) else String.format("%02d", value),
                 fontSize = fontSize,
