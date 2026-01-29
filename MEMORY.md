@@ -133,19 +133,28 @@
   - ThoughtList.kt
   - RecorderScreen.kt
 
-### 2. 轮盘式时间选择器 ✅
-- **需求**: 半圆形轮盘式滑动选择器
-- **实现**:
+### 2. 轮盘式时间选择器 ✅ → 垂直滚轮选择器 ✅
+- **第一版（已废弃）**: 半圆形轮盘式滑动选择器
   - 创建 WheelTimePickerDialog.kt
   - 年月选择：点击展开浮动框，使用 +/- 按钮切换
   - 日期/时间选择：半圆形轮盘滑动选择器（SemicircleWheelPicker）
-  - 使用 YearMonth.lengthOfMonth() 正确计算大月小月和闰年
-  - 添加弹簧动画效果（Spring.DampingRatioMediumBouncy）
-  - 支持拖动手势选择，自动吸附到最近项
-  - 实时预览选择的时间
+
+- **第二版（当前）**: iOS 风格垂直滚轮选择器（2026-01-29）
+  - **DrumRollPicker 组件**：
+    - 使用 LazyColumn 实现垂直滚动列表
+    - 5 个可见项，中心项为选中值
+    - 渐变效果：字号、颜色、透明度从中心向两端递减
+    - 循环滚动（月份、日期、小时、分钟）
+  - **布局**：
+    - 第一组：年/月/日（用 `/` 分割，32sp 大字展示）
+    - 第二组：时:分（用 `:` 分割，32sp 大字展示）
+  - **交互**：
+    - 弹性滚动动画（rememberSnapFlingBehavior）
+    - 振动反馈（HapticFeedbackConstants.CLOCK_TICK）
+    - 日期动态计算，超出范围自动调整
 - **影响文件**:
-  - 新建 WheelTimePickerDialog.kt
-  - RecorderScreen.kt（替换旧选择器）
+  - 重写 WheelTimePickerDialog.kt
+  - RecorderScreen.kt（使用新选择器）
 
 ### 3. 声波图像可视化 ✅
 - **需求**: 为每条录音添加声波图像
@@ -239,14 +248,14 @@ org/haokee/recorder/
 
 ## 开发进度总结
 
-### 2026-01-29 开发成果
+### 2026-01-29 开发成果（第一阶段）
 本次开发完成了所有待实现的 UI/UX 改进功能，共 4 次提交：
 
 1. **e0c977a** - 实现选择框替代长按功能
    - 移除长按逻辑，添加圆角矩形选择框
    - 改进交互体验
 
-2. **c7637ba** - 实现轮盘式时间选择器
+2. **c7637ba** - 实现半圆形轮盘式时间选择器（已废弃）
    - 创建半圆形轮盘选择器组件
    - 正确计算闰年和大小月
    - 添加流畅动画效果
@@ -260,11 +269,32 @@ org/haokee/recorder/
    - 添加通知权限请求
    - 改进通知效果（声音、振动、全屏）
 
+5. **cdf404f** - 修复编译错误
+   - 添加缺失的 Canvas 和 Size 导入
+
+6. **7a0f881** - 启用 Java 8+ API desugaring
+   - 解决 java.time API 在低版本 Android 的兼容性问题
+
+### 2026-01-29 开发成果（第二阶段 - 时间选择器重构）
+
+7. **99b4166** - 重新设计时间选择器为垂直滚轮样式
+   - 废弃半圆形轮盘设计，改为 iOS 风格垂直滚轮
+   - 实现 DrumRollPicker 组件（垂直滚轮选择器）
+   - 渐变淡出效果（字号、颜色、透明度）
+   - 循环滚动（月份、日期、小时、分钟）
+   - 振动反馈（每次切换触发）
+   - 弹性滚动动画
+   - 日期动态计算和自动调整
+   - 更新 CLAUDE.md 记录需求变更
+
 **技术亮点**：
 - 使用 Compose Canvas 绘制自定义 UI
+- LazyColumn + SnapFlingBehavior 实现滚轮效果
+- graphicsLayer 实现渐变动画
+- HapticFeedback 触觉反馈
 - 协程配合 Flow 实现响应式状态更新
 - 运行时权限管理（Android 13+ 兼容）
-- 手势检测和动画效果
+- Core Library Desugaring 兼容低版本 Android
 
 ---
 
