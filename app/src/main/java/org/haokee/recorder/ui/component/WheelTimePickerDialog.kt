@@ -2,18 +2,24 @@ package org.haokee.recorder.ui.component
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -84,7 +90,7 @@ fun WheelTimePickerDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = String.format("%04d/%02d/%02d", selectedYear, selectedMonth, selectedDay),
+                        text = String.format("%04d/%02d/%02d", selectedYear, selectedMonth, effectiveDay),
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -217,7 +223,7 @@ fun DrumRollPicker(
     val initialIndex = items.indexOf(selectedItem).coerceAtLeast(0)
 
     // For cyclic scrolling, repeat items to create infinite scroll
-    val displayItems = remember(items, cyclic) {
+    val displayItems = remember(items, cyclic, key) {
         if (cyclic) {
             items + items + items
         } else {
@@ -226,7 +232,7 @@ fun DrumRollPicker(
     }
 
     // Calculate initial scroll position
-    val initialScrollOffset = remember(initialIndex, cyclic, key) {
+    val initialScrollOffset = remember(initialIndex, cyclic, key, items.size) {
         if (cyclic) {
             (initialIndex + items.size) * itemHeightPx
         } else {
@@ -235,8 +241,9 @@ fun DrumRollPicker(
     }
 
     // Scroll offset (in pixels)
-    val scrollOffset = remember { Animatable(initialScrollOffset) }
+    val scrollOffset = remember(key) { Animatable(initialScrollOffset) }
     var isDragging by remember { mutableStateOf(false) }
+    var isFling by remember { mutableStateOf(false) }
     var lastNotifiedIndex by remember { mutableIntStateOf(-1) }
 
     // Calculate current center index based on scroll offset
@@ -244,7 +251,9 @@ fun DrumRollPicker(
         derivedStateOf {
             val rawIndex = (scrollOffset.value / itemHeightPx).roundToInt()
             if (cyclic) {
-                rawIndex % items.size
+                val moduloIndex = rawIndex % items.size
+                // Handle negative modulo
+                if (moduloIndex < 0) moduloIndex + items.size else moduloIndex
             } else {
                 rawIndex.coerceIn(0, items.lastIndex)
             }
@@ -253,7 +262,7 @@ fun DrumRollPicker(
 
     // Reset scroll position when key changes (e.g., month changes affecting days)
     LaunchedEffect(key, initialScrollOffset) {
-        if (!isDragging) {
+        if (!isDragging && !isFling) {
             scrollOffset.snapTo(initialScrollOffset)
             lastNotifiedIndex = -1 // Force update notification
         }
@@ -267,9 +276,9 @@ fun DrumRollPicker(
         }
     }
 
-    // Snap animation when user releases
-    LaunchedEffect(isDragging) {
-        if (!isDragging) {
+    // Snap animation when user releases (and not flinging)
+    LaunchedEffect(isDragging, isFling) {
+        if (!isDragging && !isFling) {
             // Calculate target snap position
             val targetIndex = (scrollOffset.value / itemHeightPx).roundToInt()
             val targetOffset = targetIndex * itemHeightPx
@@ -301,42 +310,82 @@ fun DrumRollPicker(
         modifier = modifier
             .fillMaxHeight()
             .width(100.dp)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = {
-                        isDragging = true
-                    },
-                    onDragEnd = {
-                        isDragging = false
-                    },
-                    onDragCancel = {
-                        isDragging = false
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
+            .pointerInput(key) {
+                val velocityTracker = VelocityTracker()
+
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    isDragging = true
+                    isFling = false
+                    velocityTracker.resetTracking()
+
+                    drag(down.id) { change ->
+                        velocityTracker.addPosition(
+                            change.uptimeMillis,
+                            change.position
+                        )
+
                         scope.launch {
-                            val newOffset = scrollOffset.value - dragAmount.y
-                            val maxOffset = if (cyclic) {
-                                Float.POSITIVE_INFINITY
+                            val dragAmount = change.positionChange().y
+                            val newOffset = scrollOffset.value - dragAmount
+
+                            // For non-cyclic, clamp the offset
+                            val clampedOffset = if (cyclic) {
+                                newOffset
                             } else {
-                                (items.size - 1) * itemHeightPx
+                                newOffset.coerceIn(0f, (items.size - 1) * itemHeightPx)
                             }
-                            scrollOffset.snapTo(newOffset.coerceIn(0f, maxOffset))
+
+                            scrollOffset.snapTo(clampedOffset)
+                        }
+                        change.consume()
+                    }
+
+                    isDragging = false
+
+                    // Calculate velocity and start fling if needed
+                    val velocity = velocityTracker.calculateVelocity()
+                    val velocityY = -velocity.y // Invert because scroll direction is opposite
+
+                    if (abs(velocityY) > 100f) { // Minimum velocity threshold
+                        isFling = true
+                        scope.launch {
+                            // Fling animation
+                            scrollOffset.animateDecay(
+                                initialVelocity = velocityY,
+                                animationSpec = exponentialDecay(
+                                    frictionMultiplier = 3f,
+                                    absVelocityThreshold = 50f
+                                )
+                            ) {
+                                // During fling, clamp for non-cyclic
+                                if (!cyclic) {
+                                    val maxOffset = (items.size - 1) * itemHeightPx
+                                    if (value < 0f || value > maxOffset) {
+                                        cancelAnimation()
+                                    }
+                                }
+                            }
+                            isFling = false
                         }
                     }
-                )
+                }
             },
         contentAlignment = Alignment.Center
     ) {
-        // Display items
+        // Display items with clipping
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(itemHeightDp * visibleItemsCount)
+                .clipToBounds() // Clip to bounds to hide overflow
         ) {
             val centerY = (visibleItemsCount / 2) * itemHeightPx
-            val startIndex = ((scrollOffset.value / itemHeightPx) - visibleItemsCount / 2).toInt().coerceAtLeast(0)
-            val endIndex = (startIndex + visibleItemsCount + 2).coerceAtMost(displayItems.size)
+
+            // Only render items within visible range ±2
+            val centerIndex = (scrollOffset.value / itemHeightPx).toInt()
+            val startIndex = (centerIndex - 2).coerceAtLeast(0)
+            val endIndex = (centerIndex + 3).coerceAtMost(displayItems.size)
 
             for (index in startIndex until endIndex) {
                 if (index !in displayItems.indices) continue
@@ -347,12 +396,15 @@ fun DrumRollPicker(
                 // Calculate offset from center (in item units)
                 val offsetFromCenter = (itemY - centerY) / itemHeightPx
 
-                PickerItem(
-                    value = item,
-                    offsetFromCenter = offsetFromCenter,
-                    itemHeight = itemHeightDp,
-                    yPosition = itemY
-                )
+                // Only render if within ±2.5 range (to allow smooth transitions)
+                if (abs(offsetFromCenter) <= 2.5f) {
+                    PickerItem(
+                        value = item,
+                        offsetFromCenter = offsetFromCenter,
+                        itemHeight = itemHeightDp,
+                        yPosition = itemY
+                    )
+                }
             }
         }
     }
@@ -367,17 +419,22 @@ fun PickerItem(
 ) {
     val absOffset = abs(offsetFromCenter)
 
-    // Smooth interpolation for scale (1.0 at center, 0.5 at ±2)
-    val scale = (1.0f - absOffset * 0.25f).coerceIn(0.5f, 1.0f)
+    // Discrete transparency levels: 100%, 66%, 33%, 0%
+    val alpha = when {
+        absOffset < 0.5f -> 1.0f      // Center: 100%
+        absOffset < 1.5f -> 0.66f     // ±1: 66%
+        absOffset < 2.5f -> 0.33f     // ±2: 33%
+        else -> 0.0f                  // Beyond ±2: 0% (invisible)
+    }
 
-    // Smooth interpolation for alpha (1.0 at center, 0.3 at ±2)
-    val alpha = (1.0f - absOffset * 0.35f).coerceIn(0.3f, 1.0f)
+    // Smooth interpolation for scale (1.0 at center, 0.6 at ±2)
+    val scale = (1.0f - absOffset * 0.2f).coerceIn(0.6f, 1.0f)
 
     // Color interpolation from Black to LightGray
     val color = lerp(
         Color.Black,
         Color.LightGray,
-        (absOffset * 0.5f).coerceIn(0f, 1f)
+        (absOffset * 0.4f).coerceIn(0f, 1f)
     )
 
     // Font weight based on distance
@@ -387,7 +444,7 @@ fun PickerItem(
         else -> FontWeight.Normal
     }
 
-    // Base font size is 28sp, scales from 28sp (center) to 14sp (far)
+    // Base font size is 28sp, scales down
     val fontSize = (28f * scale).sp
 
     Box(
@@ -402,12 +459,14 @@ fun PickerItem(
             },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = if (value >= 100) String.format("%04d", value) else String.format("%02d", value),
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            color = color,
-            textAlign = TextAlign.Center
-        )
+        if (alpha > 0f) { // Only render if visible
+            Text(
+                text = if (value >= 100) String.format("%04d", value) else String.format("%02d", value),
+                fontSize = fontSize,
+                fontWeight = fontWeight,
+                color = color,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
