@@ -1,37 +1,28 @@
 package org.haokee.recorder.ui.component
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.YearMonth
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.roundToInt
-import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,8 +36,6 @@ fun WheelTimePickerDialog(
     var selectedDay by remember { mutableIntStateOf(currentTime.dayOfMonth) }
     var selectedHour by remember { mutableIntStateOf(currentTime.hour) }
     var selectedMinute by remember { mutableIntStateOf(currentTime.minute) }
-
-    var showYearMonthPicker by remember { mutableStateOf(false) }
 
     // Calculate days in month (considering leap year)
     val daysInMonth = remember(selectedYear, selectedMonth) {
@@ -74,7 +63,8 @@ fun WheelTimePickerDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "设置提醒时间",
@@ -82,179 +72,91 @@ fun WheelTimePickerDialog(
                     fontWeight = FontWeight.Bold
                 )
 
-                // Year and Month selector
-                OutlinedCard(
-                    onClick = { showYearMonthPicker = !showYearMonthPicker },
-                    modifier = Modifier.fillMaxWidth()
+                // Date picker: Year / Month / Day
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Text(
+                        text = String.format("%04d/%02d/%02d", selectedYear, selectedMonth, selectedDay),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .height(180.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Text(
-                            text = "${selectedYear}年 ${selectedMonth}月",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium
+                        // Year picker
+                        DrumRollPicker(
+                            items = (1900..2100).toList(),
+                            selectedItem = selectedYear,
+                            onItemSelected = { selectedYear = it },
+                            modifier = Modifier.weight(1f)
                         )
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "展开"
-                        )
-                    }
-                }
 
-                // Year and Month picker (floating box)
-                if (showYearMonthPicker) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        // Month picker
+                        DrumRollPicker(
+                            items = (1..12).toList(),
+                            selectedItem = selectedMonth,
+                            onItemSelected = { selectedMonth = it },
+                            modifier = Modifier.weight(1f),
+                            cyclic = true
                         )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            // Year selector
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("年份", style = MaterialTheme.typography.labelMedium)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    FilledTonalButton(
-                                        onClick = { selectedYear-- },
-                                        modifier = Modifier.size(40.dp),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) {
-                                        Text("-")
-                                    }
-                                    Text(
-                                        text = selectedYear.toString(),
-                                        modifier = Modifier
-                                            .width(80.dp)
-                                            .align(Alignment.CenterVertically),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    FilledTonalButton(
-                                        onClick = { selectedYear++ },
-                                        modifier = Modifier.size(40.dp),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) {
-                                        Text("+")
-                                    }
-                                }
-                            }
 
-                            // Month selector
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("月份", style = MaterialTheme.typography.labelMedium)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    FilledTonalButton(
-                                        onClick = {
-                                            selectedMonth = if (selectedMonth == 1) 12 else selectedMonth - 1
-                                        },
-                                        modifier = Modifier.size(40.dp),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) {
-                                        Text("-")
-                                    }
-                                    Text(
-                                        text = selectedMonth.toString(),
-                                        modifier = Modifier
-                                            .width(60.dp)
-                                            .align(Alignment.CenterVertically),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    FilledTonalButton(
-                                        onClick = {
-                                            selectedMonth = if (selectedMonth == 12) 1 else selectedMonth + 1
-                                        },
-                                        modifier = Modifier.size(40.dp),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) {
-                                        Text("+")
-                                    }
-                                }
-                            }
-                        }
+                        // Day picker
+                        DrumRollPicker(
+                            items = (1..daysInMonth).toList(),
+                            selectedItem = selectedDay,
+                            onItemSelected = { selectedDay = it },
+                            modifier = Modifier.weight(1f),
+                            cyclic = true
+                        )
                     }
                 }
 
                 Divider()
 
-                // Semicircle wheel pickers
-                Text(
-                    text = "日期",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                SemicircleWheelPicker(
-                    items = (1..daysInMonth).toList(),
-                    selectedItem = selectedDay,
-                    onItemSelected = { selectedDay = it },
-                    itemLabel = { "${it}日" }
-                )
-
-                Divider()
-
-                Text(
-                    text = "时间",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                // Time picker: Hour : Minute
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Hour picker
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f)
+                    Text(
+                        text = String.format("%02d:%02d", selectedHour, selectedMinute),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Text("小时", style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        SemicircleWheelPicker(
+                        // Hour picker
+                        DrumRollPicker(
                             items = (0..23).toList(),
                             selectedItem = selectedHour,
                             onItemSelected = { selectedHour = it },
-                            itemLabel = { it.toString().padStart(2, '0') }
+                            modifier = Modifier.weight(1f),
+                            cyclic = true
                         )
-                    }
 
-                    // Minute picker
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("分钟", style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        SemicircleWheelPicker(
+                        // Minute picker
+                        DrumRollPicker(
                             items = (0..59).toList(),
                             selectedItem = selectedMinute,
                             onItemSelected = { selectedMinute = it },
-                            itemLabel = { it.toString().padStart(2, '0') }
+                            modifier = Modifier.weight(1f),
+                            cyclic = true
                         )
                     }
                 }
-
-                Divider()
-
-                // Preview
-                Text(
-                    text = "提醒时间: ${selectedYear}年${selectedMonth}月${selectedDay}日 ${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary
-                )
 
                 // Buttons
                 Row(
@@ -288,99 +190,171 @@ fun WheelTimePickerDialog(
 }
 
 @Composable
-fun SemicircleWheelPicker(
+fun DrumRollPicker(
     items: List<Int>,
     selectedItem: Int,
     onItemSelected: (Int) -> Unit,
-    itemLabel: (Int) -> String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cyclic: Boolean = false
 ) {
-    var offsetAngle by remember { mutableFloatStateOf(0f) }
-    val animatedOffset by animateFloatAsState(
-        targetValue = offsetAngle,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "wheel_animation"
+    val view = LocalView.current
+    val scope = rememberCoroutineScope()
+
+    // Find initial index
+    val initialIndex = items.indexOf(selectedItem).takeIf { it >= 0 } ?: 0
+    val visibleItemsCount = 5
+    val itemHeight = 36.dp
+
+    // For cyclic scrolling, we need to create an infinite list
+    val displayItems = if (cyclic) {
+        // Repeat items to create infinite scroll effect
+        items + items + items
+    } else {
+        items
+    }
+
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = if (cyclic) {
+            initialIndex + items.size // Start at middle repetition
+        } else {
+            initialIndex
+        }.coerceAtLeast(0)
     )
 
-    // Calculate angle per item
-    val anglePerItem = 180f / (items.size - 1)
-    val currentIndex = items.indexOf(selectedItem)
+    var lastSelectedIndex by remember { mutableIntStateOf(-1) }
+
+    // Track scroll position and trigger haptic feedback
+    LaunchedEffect(listState.isScrollInProgress) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { index ->
+                if (!listState.isScrollInProgress) {
+                    val centerIndex = index + visibleItemsCount / 2
+                    val actualIndex = if (cyclic) centerIndex % items.size else centerIndex
+
+                    if (actualIndex in items.indices && actualIndex != lastSelectedIndex) {
+                        lastSelectedIndex = actualIndex
+                        onItemSelected(items[actualIndex])
+
+                        // Trigger vibration
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    }
+
+                    // For cyclic scroll, reset to middle repetition when needed
+                    if (cyclic) {
+                        if (centerIndex < items.size / 2) {
+                            // Scrolled too far up, jump to middle repetition
+                            scope.launch {
+                                listState.scrollToItem(centerIndex + items.size)
+                            }
+                        } else if (centerIndex >= items.size * 2 + items.size / 2) {
+                            // Scrolled too far down, jump to middle repetition
+                            scope.launch {
+                                listState.scrollToItem(centerIndex - items.size)
+                            }
+                        }
+                    }
+                }
+            }
+    }
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .height(120.dp)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragEnd = {
-                        // Snap to nearest item
-                        val targetIndex = ((-animatedOffset / anglePerItem).roundToInt()).coerceIn(0, items.lastIndex)
-                        offsetAngle = -targetIndex * anglePerItem
-                        onItemSelected(items[targetIndex])
-                    }
-                ) { change, dragAmount ->
-                    change.consume()
-                    // Update offset based on drag
-                    val newOffset = offsetAngle + dragAmount.x * 0.5f
-                    offsetAngle = newOffset.coerceIn(-(items.lastIndex * anglePerItem), 0f)
-                }
-            }
+            .fillMaxHeight()
+            .width(80.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Canvas(
+        // Center highlight background
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .align(Alignment.Center)
+                .fillMaxWidth()
+                .height(itemHeight)
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+        )
+
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(itemHeight * visibleItemsCount),
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
         ) {
-            val centerX = size.width / 2
-            val centerY = size.height
-            val radius = size.height * 0.8f
+            // Add padding items at top
+            items(visibleItemsCount / 2) {
+                Spacer(modifier = Modifier.height(itemHeight))
+            }
 
-            // Draw semicircle arc
-            drawArc(
-                color = Color.Gray.copy(alpha = 0.3f),
-                startAngle = 180f,
-                sweepAngle = 180f,
-                useCenter = false,
-                style = Stroke(width = 2.dp.toPx()),
-                topLeft = Offset(centerX - radius, centerY - radius),
-                size = Size(radius * 2, radius * 2)
-            )
+            // Display items
+            items(displayItems.size) { index ->
+                val item = displayItems[index]
+                val offsetFromCenter = (index - listState.firstVisibleItemIndex) - (visibleItemsCount / 2)
 
-            // Draw items on the semicircle
-            items.forEachIndexed { index, item ->
-                val angle = 180f - (index * anglePerItem) + animatedOffset
-                if (angle in 0f..180f) {
-                    val radian = Math.toRadians(angle.toDouble())
-                    val x = (centerX + radius * cos(radian)).toFloat()
-                    val y = (centerY - radius * sin(radian)).toFloat()
+                PickerItem(
+                    value = item,
+                    offsetFromCenter = offsetFromCenter,
+                    itemHeight = itemHeight
+                )
+            }
 
-                    // Calculate opacity based on distance from center
-                    val distanceFromCenter = abs(angle - 90f)
-                    val opacity = (1f - (distanceFromCenter / 90f)).coerceIn(0.3f, 1f)
-
-                    // Draw point
-                    drawCircle(
-                        color = if (index == currentIndex) Color.Blue else Color.Gray,
-                        radius = if (index == currentIndex) 8.dp.toPx() else 4.dp.toPx(),
-                        center = Offset(x, y),
-                        alpha = opacity
-                    )
-                }
+            // Add padding items at bottom
+            items(visibleItemsCount / 2) {
+                Spacer(modifier = Modifier.height(itemHeight))
             }
         }
-
-        // Display selected item
-        Text(
-            text = itemLabel(items[(-animatedOffset / anglePerItem).roundToInt().coerceIn(0, items.lastIndex)]),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 8.dp)
-        )
     }
+}
+
+@Composable
+fun PickerItem(
+    value: Int,
+    offsetFromCenter: Int,
+    itemHeight: androidx.compose.ui.unit.Dp
+) {
+    val absOffset = abs(offsetFromCenter).toFloat()
+
+    // Calculate scale and alpha based on distance from center
+    val scale = when {
+        absOffset == 0f -> 1.0f
+        absOffset == 1f -> 0.7f
+        absOffset == 2f -> 0.5f
+        else -> 0.3f
+    }
+
+    val alpha = when {
+        absOffset == 0f -> 1.0f
+        absOffset == 1f -> 0.6f
+        absOffset == 2f -> 0.4f
+        else -> 0.2f
+    }
+
+    val color = when {
+        absOffset == 0f -> Color.Black
+        absOffset == 1f -> Color.Gray
+        else -> Color.LightGray
+    }
+
+    val fontWeight = when {
+        absOffset == 0f -> FontWeight.Bold
+        absOffset == 1f -> FontWeight.Medium
+        else -> FontWeight.Normal
+    }
+
+    Text(
+        text = String.format("%02d", value),
+        modifier = Modifier
+            .height(itemHeight)
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                this.alpha = alpha
+            },
+        fontSize = (20 * scale).sp,
+        fontWeight = fontWeight,
+        color = color,
+        textAlign = TextAlign.Center
+    )
 }
