@@ -269,7 +269,7 @@ fun DrumRollPicker(
     }
 
     // Update selected item in real-time (using snapshotFlow to ensure updates during animation)
-    LaunchedEffect(Unit) {
+    LaunchedEffect(key, items.size) {
         snapshotFlow { scrollOffset.value }
             .collect {
                 val rawIndex = (it / itemHeightPx).roundToInt()
@@ -398,10 +398,10 @@ fun DrumRollPicker(
         ) {
             val centerY = (visibleItemsCount / 2) * itemHeightPx
 
-            // Only render items within visible range ±2
+            // Expand render range to handle fast scrolling (±10 items)
             val centerIndex = (scrollOffset.value / itemHeightPx).toInt()
-            val startIndex = (centerIndex - 2).coerceAtLeast(0)
-            val endIndex = (centerIndex + 3).coerceAtMost(displayItems.size)
+            val startIndex = (centerIndex - 10).coerceAtLeast(0)
+            val endIndex = (centerIndex + 11).coerceAtMost(displayItems.size)
 
             for (index in startIndex until endIndex) {
                 if (index !in displayItems.indices) continue
@@ -412,7 +412,7 @@ fun DrumRollPicker(
                 // Calculate offset from center (in item units)
                 val offsetFromCenter = (itemY - centerY) / itemHeightPx
 
-                // Only render if within ±2.5 range (to allow smooth transitions)
+                // Only render if within ±2.5 range (visible area)
                 if (abs(offsetFromCenter) <= 2.5f) {
                     PickerItem(
                         value = item,
