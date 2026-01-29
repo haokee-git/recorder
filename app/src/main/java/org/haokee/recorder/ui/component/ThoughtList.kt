@@ -20,6 +20,7 @@ fun ThoughtList(
     selectedThoughts: Set<String>,
     currentPlayingThoughtId: String?,
     isPlaying: Boolean,
+    playbackProgress: Float = 0f,
     onThoughtClick: (Thought) -> Unit,
     onCheckboxClick: (Thought) -> Unit,
     onPlayClick: (Thought) -> Unit,
@@ -46,6 +47,7 @@ fun ThoughtList(
                         thought = thought,
                         isSelected = thought.id in selectedThoughts,
                         isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
+                        playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
                         onClick = { onThoughtClick(thought) },
                         onCheckboxClick = { onCheckboxClick(thought) },
                         onPlayClick = { onPlayClick(thought) }
@@ -66,6 +68,7 @@ fun ThoughtList(
                         thought = thought,
                         isSelected = thought.id in selectedThoughts,
                         isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
+                        playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
                         onClick = { onThoughtClick(thought) },
                         onCheckboxClick = { onCheckboxClick(thought) },
                         onPlayClick = { onPlayClick(thought) }
@@ -86,6 +89,7 @@ fun ThoughtList(
                         thought = thought,
                         isSelected = thought.id in selectedThoughts,
                         isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
+                        playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
                         onClick = { onThoughtClick(thought) },
                         onCheckboxClick = { onCheckboxClick(thought) },
                         onPlayClick = { onPlayClick(thought) }

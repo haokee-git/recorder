@@ -2,6 +2,7 @@ package org.haokee.recorder.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.haokee.recorder.audio.player.AudioPlayer
@@ -34,6 +35,21 @@ class ThoughtListViewModel(
 
     init {
         loadThoughts()
+        startPlaybackProgressUpdater()
+    }
+
+    private fun startPlaybackProgressUpdater() {
+        viewModelScope.launch {
+            audioPlayer.playbackState.collect { playbackState ->
+                if (playbackState.isPlaying) {
+                    // Update progress every 100ms while playing
+                    while (playbackState.isPlaying) {
+                        delay(100)
+                        audioPlayer.updateProgress()
+                    }
+                }
+            }
+        }
     }
 
     private fun loadThoughts() {

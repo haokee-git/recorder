@@ -28,6 +28,7 @@ fun TranscribedThoughtItem(
     thought: Thought,
     isSelected: Boolean,
     isPlaying: Boolean,
+    playbackProgress: Float = 0f,
     onClick: () -> Unit,
     onCheckboxClick: () -> Unit,
     onPlayClick: () -> Unit,
@@ -99,6 +100,14 @@ fun TranscribedThoughtItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                // Waveform visualization
+                WaveformView(
+                    audioPath = thought.audioPath,
+                    progress = if (isPlaying) playbackProgress else 0f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -147,6 +156,7 @@ fun OriginalThoughtItem(
     thought: Thought,
     isSelected: Boolean,
     isPlaying: Boolean,
+    playbackProgress: Float = 0f,
     onClick: () -> Unit,
     onCheckboxClick: () -> Unit,
     onPlayClick: () -> Unit,
@@ -224,6 +234,14 @@ fun OriginalThoughtItem(
                         )
                     }
                 }
+
+                // Waveform visualization
+                WaveformView(
+                    audioPath = thought.audioPath,
+                    progress = if (isPlaying) playbackProgress else 0f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 Text(
                     text = thought.createdAt.toDisplayString(),
                     fontSize = 12.sp,
@@ -261,6 +279,7 @@ fun ExpiredThoughtItem(
     thought: Thought,
     isSelected: Boolean,
     isPlaying: Boolean,
+    playbackProgress: Float = 0f,
     onClick: () -> Unit,
     onCheckboxClick: () -> Unit,
     onPlayClick: () -> Unit,
@@ -338,6 +357,14 @@ fun ExpiredThoughtItem(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                // Waveform visualization
+                WaveformView(
+                    audioPath = thought.audioPath,
+                    progress = if (isPlaying) playbackProgress else 0f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
