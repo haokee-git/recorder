@@ -350,21 +350,33 @@ fun DrumRollPicker(
                     if (abs(velocityY) > 100f) { // Minimum velocity threshold
                         isFling = true
                         scope.launch {
-                            // Fling animation
-                            scrollOffset.animateDecay(
-                                initialVelocity = velocityY,
-                                animationSpec = exponentialDecay(
+                            // Fling animation with boundary check
+                            if (cyclic) {
+                                // For cyclic, no boundary check needed
+                                scrollOffset.animateDecay(
+                                    initialVelocity = velocityY,
+                                    animationSpec = exponentialDecay(
+                                        frictionMultiplier = 3f,
+                                        absVelocityThreshold = 50f
+                                    )
+                                )
+                            } else {
+                                // For non-cyclic, clamp the target
+                                val decaySpec = exponentialDecay<Float>(
                                     frictionMultiplier = 3f,
                                     absVelocityThreshold = 50f
                                 )
-                            ) {
-                                // During fling, clamp for non-cyclic
-                                if (!cyclic) {
-                                    val maxOffset = (items.size - 1) * itemHeightPx
-                                    if (value < 0f || value > maxOffset) {
-                                        cancelAnimation()
-                                    }
-                                }
+                                val targetOffset = decaySpec.calculateTargetValue(
+                                    scrollOffset.value,
+                                    velocityY
+                                )
+                                val maxOffset = (items.size - 1) * itemHeightPx
+                                val clampedTarget = targetOffset.coerceIn(0f, maxOffset)
+
+                                scrollOffset.animateDecay(
+                                    initialVelocity = velocityY,
+                                    animationSpec = decaySpec
+                                )
                             }
                             isFling = false
                         }
