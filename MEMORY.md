@@ -287,6 +287,32 @@ org/haokee/recorder/
    - 日期动态计算和自动调整
    - 更新 CLAUDE.md 记录需求变更
 
+8. **5b1b400** - 修复时间选择器的关键问题
+   - 日期回滚到正确值（30日而非01日）
+   - 实现惯性滚动（VelocityTracker + animateDecay）
+   - 优化透明度为离散值（100% → 66% → 33% → 0%）
+   - 添加 clipToBounds 限制显示范围
+
+9. **b5a7da6** - 清理不需要的导入
+
+10. **26704bd** - 修复日期选择器同步问题
+    - 添加 key 参数到 remember 依赖
+    - 修复负数取模问题
+    - 使用 effectiveDay 确保日期有效性
+
+11. **d2dde14** - 修复三个关键问题的最终版本
+    - 完善惯性滚动实现
+    - 优化渲染性能
+    - 修复循环滚动边界问题
+
+12. **5d0b15e** + **ae17a74** - 修复编译错误
+    - 移除不存在的 cancelAnimation API
+    - 简化边界检查逻辑
+
+13. **2da1af1** - 修复拖动松手和显示同步
+    - 修复拖动松手后无法吸附的问题
+    - 使用 snapshotFlow 确保实时更新显示
+
 **技术亮点**：
 - 使用 Compose Canvas 绘制自定义 UI
 - LazyColumn + SnapFlingBehavior 实现滚轮效果
