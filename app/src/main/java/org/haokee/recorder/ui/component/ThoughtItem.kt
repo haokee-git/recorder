@@ -1,5 +1,8 @@
 package org.haokee.recorder.ui.component
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,12 +16,17 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,32 +77,10 @@ fun TranscribedThoughtItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Checkbox on the left
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(6.dp)
-                    )
-                    .clickable(onClick = onCheckboxClick),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "已选中",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
+                AnimatedCheckbox(
+                    isSelected = isSelected,
+                    onClick = onCheckboxClick
+                )
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -201,32 +187,10 @@ fun OriginalThoughtItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Checkbox on the left
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(6.dp)
-                    )
-                    .clickable(onClick = onCheckboxClick),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "已选中",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
+                AnimatedCheckbox(
+                    isSelected = isSelected,
+                    onClick = onCheckboxClick
+                )
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -438,5 +402,74 @@ private fun ColorTriangle(
             path = path,
             color = color.color
         )
+    }
+}
+
+@Composable
+private fun AnimatedCheckbox(
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Animate corner radius: circle (12.dp) to rounded rect (6.dp)
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isSelected) 6.dp else 12.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "cornerRadius"
+    )
+
+    // Inner corner radius should be smaller to match the border
+    val innerCornerRadius = (cornerRadius - 1.dp).coerceAtLeast(0.dp)
+
+    // Animate check progress (0 to 1)
+    val checkProgress by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "checkProgress"
+    )
+
+    // Save primary color for use in Canvas
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    Box(
+        modifier = modifier
+            .size(24.dp)
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(primaryColor)
+            .padding(1.dp)
+            .clip(RoundedCornerShape(innerCornerRadius))
+            .background(Color.White)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        // Animated check mark from left to right
+        Canvas(modifier = Modifier.size(16.dp)) {
+            if (checkProgress > 0f) {
+                val checkPath = Path().apply {
+                    // Check mark path
+                    moveTo(size.width * 0.2f, size.height * 0.5f)
+                    lineTo(size.width * 0.4f, size.height * 0.7f)
+                    lineTo(size.width * 0.8f, size.height * 0.3f)
+                }
+
+                // Clip the path based on progress
+                clipRect(
+                    left = 0f,
+                    top = 0f,
+                    right = size.width * checkProgress,
+                    bottom = size.height
+                ) {
+                    drawPath(
+                        path = checkPath,
+                        color = primaryColor,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
+            }
+        }
     }
 }

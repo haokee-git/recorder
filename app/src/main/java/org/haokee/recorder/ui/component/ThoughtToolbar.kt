@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 fun ThoughtToolbar(
     hasSelection: Boolean,
     isSingleSelection: Boolean,
+    isAllTranscribed: Boolean,
     onBatchConvertClick: () -> Unit,
     onEditClick: () -> Unit,
     onSetAlarmClick: () -> Unit,
@@ -45,7 +46,7 @@ fun ThoughtToolbar(
                 ToolbarButton(
                     icon = Icons.Default.Refresh,
                     text = "转换",
-                    enabled = hasSelection,
+                    enabled = hasSelection && !isAllTranscribed,
                     onClick = onBatchConvertClick
                 )
                 ToolbarButton(

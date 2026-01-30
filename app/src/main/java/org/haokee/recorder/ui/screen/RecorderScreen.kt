@@ -108,9 +108,18 @@ fun RecorderScreen(
                 .padding(paddingValues)
         ) {
             // Toolbar
+            val allThoughts = uiState.transcribedThoughts +
+                    uiState.originalThoughts +
+                    uiState.expiredAlarmThoughts
+            val isAllTranscribed = uiState.selectedThoughts.isNotEmpty() &&
+                    uiState.selectedThoughts.all { id ->
+                        allThoughts.find { it.id == id }?.isTranscribed == true
+                    }
+
             ThoughtToolbar(
                 hasSelection = uiState.selectedThoughts.isNotEmpty(),
                 isSingleSelection = uiState.selectedThoughts.size == 1,
+                isAllTranscribed = isAllTranscribed,
                 onBatchConvertClick = {
                     viewModel.convertSelectedThoughts()
                 },
@@ -118,9 +127,6 @@ fun RecorderScreen(
                     // Get the single selected thought
                     val selectedId = uiState.selectedThoughts.firstOrNull()
                     if (selectedId != null) {
-                        val allThoughts = uiState.transcribedThoughts +
-                                uiState.originalThoughts +
-                                uiState.expiredAlarmThoughts
                         editingThought = allThoughts.find { it.id == selectedId }
                     }
                 },

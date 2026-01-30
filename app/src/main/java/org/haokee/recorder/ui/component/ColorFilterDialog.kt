@@ -123,8 +123,8 @@ fun ColorFilterDialog(
                     onDismiss()
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("确定")
@@ -134,8 +134,8 @@ fun ColorFilterDialog(
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("取消")
@@ -156,6 +156,9 @@ private fun FilterColorCircle(
         animationSpec = tween(durationMillis = 200),
         label = "cornerRadius"
     )
+
+    // Inner corner radius should be smaller to match the border
+    val innerCornerRadius = (cornerRadius - 1.dp).coerceAtLeast(0.dp)
 
     // Animate check progress (0 to 1)
     val checkProgress by animateFloatAsState(
@@ -179,7 +182,7 @@ private fun FilterColorCircle(
             .clip(RoundedCornerShape(cornerRadius))
             .background(borderColor)
             .padding(1.dp)
-            .clip(RoundedCornerShape(cornerRadius))
+            .clip(RoundedCornerShape(innerCornerRadius))
             .background(color.color)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
