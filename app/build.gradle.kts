@@ -74,7 +74,9 @@ dependencies {
     implementation(files("libs/sherpa-onnx-static-link-onnxruntime-1.12.23.aar"))
 
     // OpenCC4J for Traditional to Simplified Chinese conversion
-    implementation("com.github.houbb:opencc4j:1.8.1")
+    implementation("com.github.houbb:opencc4j:1.8.1") {
+        exclude(group = "org.jetbrains", module = "annotations-java5")
+    }
 
     // Security for encrypted SharedPreferences
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
