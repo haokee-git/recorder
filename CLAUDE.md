@@ -338,6 +338,32 @@
 
 ---
 
+### 2026-01-30 - 自动繁简转换
+
+#### 需求背景
+Whisper 多语言模型识别结果可能包含繁体中文，用户需要简体中文输出。
+
+#### 技术方案
+- **库选择**：OpenCC4J (com.github.houbb:opencc4j:1.8.1)
+- **集成位置**：SpeechToTextHelper.convertThought()
+- **转换时机**：Whisper 识别完成后，保存到数据库前
+
+#### 实现细节
+1. 添加 OpenCC4J 依赖到 build.gradle.kts
+2. 创建 ChineseConverter.kt 工具类：
+   - toSimplified(): 繁体转简体
+   - containsTraditional(): 检测是否含繁体
+   - ensureSimplified(): 智能转换
+3. 在 SpeechToTextHelper 中调用 ChineseConverter.toSimplified()
+4. 添加日志记录转换前后的文本
+
+#### 效果
+- ✅ 自动将识别结果中的繁体字转换为简体
+- ✅ 支持混合文本（中英文、繁简体混合）
+- ✅ 转换失败时返回原文，不影响功能
+
+---
+
 ### 2026-01-29 - 时间选择器重新设计（垂直滚轮）
 
 #### 需求背景

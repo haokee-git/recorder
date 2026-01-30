@@ -73,6 +73,9 @@ dependencies {
     // Place sherpa-onnx-static-link-onnxruntime-1.12.23.aar in app/libs/
     implementation(files("libs/sherpa-onnx-static-link-onnxruntime-1.12.23.aar"))
 
+    // OpenCC4J for Traditional to Simplified Chinese conversion
+    implementation("com.github.houbb:opencc4j:1.8.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

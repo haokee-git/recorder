@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.haokee.recorder.audio.whisper.WhisperHelper
 import org.haokee.recorder.data.model.Thought
+import org.haokee.recorder.util.ChineseConverter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -82,19 +83,21 @@ class SpeechToTextHelper(private val context: Context) {
             val transcribeResult = whisperHelper.transcribe(audioPath)
 
             if (transcribeResult.isSuccess) {
-                val transcribedText = transcribeResult.getOrNull() ?: ""
+                val rawText = transcribeResult.getOrNull() ?: ""
 
-                if (transcribedText.isBlank()) {
+                if (rawText.isBlank()) {
                     Log.w(TAG, "Transcription returned empty text")
                     return@withContext createFallbackThought(thought, "未识别到语音内容")
                 }
+
+                // Convert Traditional Chinese to Simplified Chinese
+                val transcribedText = ChineseConverter.toSimplified(rawText)
+                Log.d(TAG, "Transcription successful (after conversion): $transcribedText")
 
                 // Use transcribed text as both title and content
                 // In Phase 4, we can use LLM to generate a better title
                 val title = generateTitleFromText(transcribedText)
                 val content = transcribedText
-
-                Log.d(TAG, "Transcription successful: $transcribedText")
 
                 thought.copy(
                     title = title,
