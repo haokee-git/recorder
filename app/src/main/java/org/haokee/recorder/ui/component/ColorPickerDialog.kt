@@ -59,32 +59,42 @@ fun ColorPickerDialog(
                 }
 
                 // Clear color option
-                TextButton(
+                Button(
                     onClick = { selectedColor = null },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 ) {
                     Text(
-                        text = if (selectedColor == null) "✓ 无颜色" else "清除颜色",
-                        color = if (selectedColor == null)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.onSurface
+                        text = if (selectedColor == null) "✓ 无颜色" else "清除颜色"
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     onColorSelected(selectedColor)
                     onDismiss()
-                }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             ) {
                 Text("确定")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
                 Text("取消")
             }
         }

@@ -177,11 +177,17 @@ fun WheelTimePickerDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
                         Text("取消")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    FilledTonalButton(
+                    Button(
                         onClick = {
                             val alarmTime = LocalDateTime.of(
                                 selectedYear,
@@ -192,7 +198,11 @@ fun WheelTimePickerDialog(
                             )
                             onTimeSelected(alarmTime)
                             onDismiss()
-                        }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     ) {
                         Text("确定")
                     }

@@ -1,17 +1,22 @@
 package org.haokee.recorder.ui.component
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.haokee.recorder.data.model.ThoughtColor
@@ -34,29 +39,6 @@ fun ColorFilterDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Quick actions
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            currentSelection = ThoughtColor.entries.toSet()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("全选")
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            currentSelection = emptySet()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("清除")
-                    }
-                }
-
                 // Color grid
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -95,6 +77,30 @@ fun ColorFilterDialog(
                     }
                 }
 
+                // Clear button at bottom right
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = {
+                            currentSelection = emptySet()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("清除")
+                    }
+                }
+
                 Text(
                     text = if (currentSelection.isEmpty())
                         "未选择（显示所有）"
@@ -106,17 +112,27 @@ fun ColorFilterDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     onColorsSelected(currentSelection.toList())
                     onDismiss()
-                }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             ) {
                 Text("确定")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
                 Text("取消")
             }
         }
@@ -129,32 +145,35 @@ private fun FilterColorCircle(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    // Animate corner radius: circle (28.dp) to rounded rect (8.dp)
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isSelected) 8.dp else 28.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "cornerRadius"
+    )
+
+    // Animate check icon scale
+    val checkScale by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "checkScale"
+    )
+
     Box(
         modifier = Modifier
             .size(56.dp)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(cornerRadius))
             .background(color.color)
-            .then(
-                if (isSelected) Modifier.border(
-                    width = 3.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = CircleShape
-                ) else Modifier.border(
-                    width = 1.dp,
-                    color = Color.Gray.copy(alpha = 0.3f),
-                    shape = CircleShape
-                )
-            )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        if (isSelected) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "已选择",
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
-            )
-        }
+        Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = "已选择",
+            tint = Color.White,
+            modifier = Modifier
+                .size(32.dp)
+                .scale(checkScale)
+        )
     }
 }
