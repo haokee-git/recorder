@@ -1,17 +1,22 @@
 package org.haokee.recorder.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
@@ -22,6 +27,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -280,22 +292,20 @@ private fun SectionHeader(
             modifier = Modifier.clickable(onClick = onToggleCollapse)
         )
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            TextButton(
-                onClick = onSelectAll,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                ),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.clickable(onClick = onSelectAll)
             ) {
-                Icon(
-                    imageVector = if (isAllSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+                SectionCheckbox(isSelected = isAllSelected)
+                Text(
+                    "全选",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.width(2.dp))
-                Text("全选", style = MaterialTheme.typography.bodySmall)
             }
             IconButton(
                 onClick = onToggleCollapse,
@@ -307,6 +317,78 @@ private fun SectionHeader(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionCheckbox(
+    isSelected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    // Animate corner radius: circle (10.dp) to rounded rect (5.dp)
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isSelected) 5.dp else 10.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "cornerRadius"
+    )
+
+    // Save primary color for use in Canvas and border
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    // Border width is always 1.dp
+    val borderWidth = 1.dp
+
+    // Border color changes based on selection
+    val borderColor = if (isSelected) primaryColor else MaterialTheme.colorScheme.outline
+
+    // Animate check progress (0 to 1)
+    val checkProgress by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "checkProgress"
+    )
+
+    Box(
+        modifier = modifier
+            .size(20.dp)
+            .border(
+                width = borderWidth,
+                color = borderColor,
+                shape = RoundedCornerShape(cornerRadius)
+            )
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(if (isSelected) primaryColor else Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        // Animated check mark from left to right
+        Canvas(modifier = Modifier.size(13.dp)) {
+            if (checkProgress > 0f) {
+                val checkPath = Path().apply {
+                    // Check mark path
+                    moveTo(size.width * 0.2f, size.height * 0.5f)
+                    lineTo(size.width * 0.4f, size.height * 0.7f)
+                    lineTo(size.width * 0.8f, size.height * 0.3f)
+                }
+
+                // Clip the path based on progress
+                clipRect(
+                    left = 0f,
+                    top = 0f,
+                    right = size.width * checkProgress,
+                    bottom = size.height
+                ) {
+                    drawPath(
+                        path = checkPath,
+                        color = Color.White,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
             }
         }
     }
