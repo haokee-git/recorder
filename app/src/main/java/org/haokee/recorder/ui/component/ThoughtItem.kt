@@ -29,6 +29,7 @@ fun TranscribedThoughtItem(
     isSelected: Boolean,
     isPlaying: Boolean,
     playbackProgress: Float = 0f,
+    isRecording: Boolean = false,
     onClick: () -> Unit,
     onCheckboxClick: () -> Unit,
     onPlayClick: () -> Unit,
@@ -140,7 +141,10 @@ fun TranscribedThoughtItem(
                     )
                 }
 
-                IconButton(onClick = onPlayClick) {
+                IconButton(
+                    onClick = onPlayClick,
+                    enabled = !isRecording
+                ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "暂停" else "播放"
@@ -157,6 +161,7 @@ fun OriginalThoughtItem(
     isSelected: Boolean,
     isPlaying: Boolean,
     playbackProgress: Float = 0f,
+    isRecording: Boolean = false,
     onClick: () -> Unit,
     onCheckboxClick: () -> Unit,
     onPlayClick: () -> Unit,
@@ -263,7 +268,10 @@ fun OriginalThoughtItem(
                     )
                 }
 
-                IconButton(onClick = onPlayClick) {
+                IconButton(
+                    onClick = onPlayClick,
+                    enabled = !isRecording
+                ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "暂停" else "播放"
@@ -280,6 +288,7 @@ fun ExpiredThoughtItem(
     isSelected: Boolean,
     isPlaying: Boolean,
     playbackProgress: Float = 0f,
+    isRecording: Boolean = false,
     onClick: () -> Unit,
     onCheckboxClick: () -> Unit,
     onPlayClick: () -> Unit,

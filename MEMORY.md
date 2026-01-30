@@ -433,6 +433,92 @@ org/haokee/recorder/
 
 ---
 
+### 2026-01-30 UX 细节优化
+
+完成了两项关键的用户体验优化，提升了交互流畅性和逻辑连贯性。
+
+#### 1. 自动选择新增/转换的感言 ✅
+**需求**: 录音完成或转换完成后，自动选中新增或转换的感言（单选），方便用户立即进行后续操作。
+
+**实现**:
+- **ThoughtListViewModel.stopRecording()** - 录音完成后
+  ```kotlin
+  _uiState.update { state ->
+      state.copy(
+          selectedThoughts = setOf(thought.id),
+          isMultiSelectMode = true
+      )
+  }
+  ```
+
+- **ThoughtListViewModel.convertSelectedThoughts()** - 转换完成后
+  ```kotlin
+  if (firstThoughtId != null) {
+      _uiState.update { state ->
+          state.copy(
+              selectedThoughts = setOf(firstThoughtId),
+              isMultiSelectMode = true
+          )
+      }
+  }
+  ```
+
+**效果**:
+- 录音完成后自动选中新录音，用户可立即点击"批量转换"
+- 转换完成后自动选中第一条转换结果，用户可立即编辑、设置颜色或提醒
+
+#### 2. 录音时禁用播放功能 ✅
+**需求**: 当开始录音时，停止正在播放的音频，并将所有播放按钮变为灰色且不可点击。
+
+**实现**:
+- **ThoughtListViewModel.startRecording()** - 录音开始时停止播放
+  ```kotlin
+  if (audioPlayer.playbackState.value.isPlaying) {
+      audioPlayer.stop()
+  }
+  ```
+
+- **ThoughtItem.kt (三个变体)** - 添加 isRecording 参数
+  ```kotlin
+  IconButton(
+      onClick = onPlayClick,
+      enabled = !isRecording
+  ) {
+      Icon(...)
+  }
+  ```
+
+- **ThoughtList.kt** - 传递 isRecording 状态
+  ```kotlin
+  fun ThoughtList(..., isRecording: Boolean = false) {
+      TranscribedThoughtItem(..., isRecording = isRecording)
+      OriginalThoughtItem(..., isRecording = isRecording)
+      ExpiredThoughtItem(..., isRecording = isRecording)
+  }
+  ```
+
+- **RecorderScreen.kt** - 从录音状态获取并传递
+  ```kotlin
+  ThoughtList(
+      ...,
+      isRecording = recordingState.isRecording,
+      ...
+  )
+  ```
+
+**效果**:
+- 录音时所有播放按钮变为灰色且不可点击
+- 防止录音与播放冲突
+- 提供更清晰的视觉反馈
+
+#### 影响文件
+- ThoughtListViewModel.kt: 自动选择逻辑 + 停止播放逻辑
+- ThoughtItem.kt: 所有三个变体添加 isRecording 参数
+- ThoughtList.kt: 传递 isRecording 状态
+- RecorderScreen.kt: 从录音状态获取并传递
+
+---
+
 ## 当前项目状态（截至 2026-01-29）
 
 ### 已完成功能模块

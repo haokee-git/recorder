@@ -149,6 +149,7 @@ fun RecorderScreen(
                 playbackProgress = if (playbackState.duration > 0) {
                     playbackState.currentPosition.toFloat() / playbackState.duration.toFloat()
                 } else 0f,
+                isRecording = recordingState.isRecording,
                 onThoughtClick = { thought ->
                     // Click on card - play audio
                     if (playbackState.currentThoughtId == thought.id && playbackState.isPlaying) {

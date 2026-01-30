@@ -107,6 +107,11 @@ class ThoughtListViewModel(
 
     fun startRecording() {
         viewModelScope.launch {
+            // Stop playback if playing
+            if (audioPlayer.playbackState.value.isPlaying) {
+                audioPlayer.stop()
+            }
+
             val fileName = "thought_${System.currentTimeMillis()}.m4a"
             val outputFile = repository.createAudioFile(fileName)
 
@@ -129,6 +134,14 @@ class ThoughtListViewModel(
                         isTranscribed = false
                     )
                     repository.insertThought(thought)
+
+                    // Auto-select the new thought (single selection)
+                    _uiState.update { state ->
+                        state.copy(
+                            selectedThoughts = setOf(thought.id),
+                            isMultiSelectMode = true
+                        )
+                    }
                 }
             }.onFailure { exception ->
                 _uiState.update {
@@ -247,6 +260,9 @@ class ThoughtListViewModel(
             // Show loading state
             _uiState.update { it.copy(isLoading = true) }
 
+            // Remember the first thought ID for auto-selection
+            val firstThoughtId = thoughtsToConvert.firstOrNull()?.id
+
             thoughtsToConvert.forEach { thought ->
                 try {
                     val convertedThought = speechToTextHelper.convertThought(thought)
@@ -259,7 +275,18 @@ class ThoughtListViewModel(
             }
 
             _uiState.update { it.copy(isLoading = false) }
-            clearSelection()
+
+            // Auto-select the first converted thought (single selection)
+            if (firstThoughtId != null) {
+                _uiState.update { state ->
+                    state.copy(
+                        selectedThoughts = setOf(firstThoughtId),
+                        isMultiSelectMode = true
+                    )
+                }
+            } else {
+                clearSelection()
+            }
         }
     }
 
