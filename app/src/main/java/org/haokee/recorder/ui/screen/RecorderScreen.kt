@@ -1,13 +1,23 @@
 package org.haokee.recorder.ui.screen
 
 import android.Manifest
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -259,17 +269,39 @@ fun RecorderScreen(
         )
     }
 
-    // Color filter dialog
+    // Color filter dropdown (no dialog, just show/hide)
     if (showColorFilter) {
-        ColorFilterDialog(
-            selectedColors = uiState.selectedColors,
-            onDismiss = {
-                showColorFilter = false
-            },
-            onColorsSelected = { colors ->
-                viewModel.setColorFilter(colors)
-            }
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    onClick = { showColorFilter = false },
+                    indication = null,
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                )
+        ) {
+            ColorFilterDropdown(
+                selectedColors = uiState.selectedColors,
+                onColorToggle = { color ->
+                    val currentColors = uiState.selectedColors.toMutableSet()
+                    if (color in currentColors) {
+                        currentColors.remove(color)
+                    } else {
+                        currentColors.add(color)
+                    }
+                    viewModel.setColorFilter(currentColors.toList())
+                },
+                onSelectAll = {
+                    viewModel.setColorFilter(org.haokee.recorder.data.model.ThoughtColor.entries)
+                },
+                onClearAll = {
+                    viewModel.setColorFilter(emptyList())
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 120.dp, end = 16.dp)
+            )
+        }
     }
 
     // Alarm time picker dialog
@@ -389,6 +421,139 @@ private fun SelectionInfoBar(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text("清除选中", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun ColorFilterDropdown(
+    selectedColors: List<org.haokee.recorder.data.model.ThoughtColor>,
+    onColorToggle: (org.haokee.recorder.data.model.ThoughtColor) -> Unit,
+    onSelectAll: () -> Unit,
+    onClearAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.width(220.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Color grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                org.haokee.recorder.data.model.ThoughtColor.entries.take(4).forEach { color ->
+                    FilterColorCircle(
+                        color = color,
+                        isSelected = color in selectedColors,
+                        onClick = { onColorToggle(color) }
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                org.haokee.recorder.data.model.ThoughtColor.entries.drop(4).forEach { color ->
+                    FilterColorCircle(
+                        color = color,
+                        isSelected = color in selectedColors,
+                        onClick = { onColorToggle(color) }
+                    )
+                }
+            }
+
+            // All/Clear buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                TextButton(
+                    onClick = onSelectAll,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("全选", style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton(
+                    onClick = onClearAll,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("清除", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterColorCircle(
+    color: org.haokee.recorder.data.model.ThoughtColor,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isSelected) 8.dp else 28.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "cornerRadius"
+    )
+
+    val innerCornerRadius = (cornerRadius - 1.dp).coerceAtLeast(0.dp)
+
+    val checkProgress by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "checkProgress"
+    )
+
+    val borderColor = remember(color) {
+        androidx.compose.ui.graphics.Color(
+            red = color.color.red * 0.7f,
+            green = color.color.green * 0.7f,
+            blue = color.color.blue * 0.7f
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(borderColor)
+            .padding(1.dp)
+            .clip(RoundedCornerShape(innerCornerRadius))
+            .background(color.color)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.size(24.dp)) {
+            if (checkProgress > 0f) {
+                val checkPath = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(size.width * 0.2f, size.height * 0.5f)
+                    lineTo(size.width * 0.4f, size.height * 0.7f)
+                    lineTo(size.width * 0.8f, size.height * 0.3f)
+                }
+
+                clipRect(
+                    left = 0f,
+                    top = 0f,
+                    right = size.width * checkProgress,
+                    bottom = size.height
+                ) {
+                    drawPath(
+                        path = checkPath,
+                        color = androidx.compose.ui.graphics.Color.White,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 4.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
+            }
         }
     }
 }
