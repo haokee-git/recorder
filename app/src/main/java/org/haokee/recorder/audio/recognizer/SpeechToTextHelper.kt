@@ -34,6 +34,7 @@ class SpeechToTextHelper(private val context: Context) {
 
     private val whisperHelper = WhisperHelper.getInstance(context)
     private var isWhisperInitialized = false
+    private val recordingsDir = context.filesDir.resolve("recordings")
 
     /**
      * Initialize Whisper model
@@ -71,8 +72,14 @@ class SpeechToTextHelper(private val context: Context) {
                 }
             }
 
+            // Get full audio file path
+            val audioFile = recordingsDir.resolve(thought.audioPath)
+            val audioPath = audioFile.absolutePath
+
+            Log.d(TAG, "Converting thought with audio file: $audioPath")
+
             // Transcribe audio file
-            val transcribeResult = whisperHelper.transcribe(thought.audioPath)
+            val transcribeResult = whisperHelper.transcribe(audioPath)
 
             if (transcribeResult.isSuccess) {
                 val transcribedText = transcribeResult.getOrNull() ?: ""
