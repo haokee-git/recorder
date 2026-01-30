@@ -1,5 +1,6 @@
 package org.haokee.recorder.ui.component
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,12 +16,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.haokee.recorder.data.model.Thought
+import org.haokee.recorder.data.model.ThoughtColor
 import org.haokee.recorder.util.extension.toDisplayString
 
 @Composable
@@ -48,14 +52,23 @@ fun TranscribedThoughtItem(
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Checkbox on the left
+        Box {
+            // Color triangle in top-left corner
+            thought.color?.let { color ->
+                ColorTriangle(
+                    color = color,
+                    modifier = Modifier.align(Alignment.TopStart)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Checkbox on the left
             Box(
                 modifier = Modifier
                     .size(24.dp)
@@ -131,16 +144,6 @@ fun TranscribedThoughtItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Color indicator - smaller and moved to left of play button
-                thought.color?.let { color ->
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(color.color)
-                    )
-                }
-
                 IconButton(
                     onClick = onPlayClick,
                     enabled = !isRecording
@@ -151,6 +154,7 @@ fun TranscribedThoughtItem(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -180,14 +184,23 @@ fun OriginalThoughtItem(
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Checkbox on the left
+        Box {
+            // Color triangle in top-left corner
+            thought.color?.let { color ->
+                ColorTriangle(
+                    color = color,
+                    modifier = Modifier.align(Alignment.TopStart)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Checkbox on the left
             Box(
                 modifier = Modifier
                     .size(24.dp)
@@ -258,16 +271,6 @@ fun OriginalThoughtItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Color indicator - smaller and moved to left of play button
-                thought.color?.let { color ->
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(color.color)
-                    )
-                }
-
                 IconButton(
                     onClick = onPlayClick,
                     enabled = !isRecording
@@ -278,6 +281,7 @@ fun OriginalThoughtItem(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -310,16 +314,25 @@ fun ExpiredThoughtItem(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Checkbox on the left
-            Box(
+        Box {
+            // Color triangle in top-left corner
+            thought.color?.let { color ->
+                ColorTriangle(
+                    color = color,
+                    modifier = Modifier.align(Alignment.TopStart)
+                )
+            }
+
+            Row(
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Checkbox on the left
+                Box(
+                    modifier = Modifier
                     .size(24.dp)
                     .clip(RoundedCornerShape(6.dp))
                     .background(
@@ -396,16 +409,6 @@ fun ExpiredThoughtItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Color indicator - smaller and moved to left of play button
-                thought.color?.let { color ->
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(color.color.copy(alpha = 0.5f))
-                    )
-                }
-
                 IconButton(onClick = onPlayClick) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -415,5 +418,25 @@ fun ExpiredThoughtItem(
                 }
             }
         }
+        }
+    }
+}
+
+@Composable
+private fun ColorTriangle(
+    color: ThoughtColor,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier.size(32.dp)) {
+        val path = Path().apply {
+            moveTo(0f, 0f)
+            lineTo(size.width, 0f)
+            lineTo(0f, size.height)
+            close()
+        }
+        drawPath(
+            path = path,
+            color = color.color
+        )
     }
 }

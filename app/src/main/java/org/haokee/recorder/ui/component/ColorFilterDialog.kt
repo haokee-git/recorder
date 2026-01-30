@@ -3,6 +3,7 @@ package org.haokee.recorder.ui.component
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,8 +17,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import org.haokee.recorder.data.model.ThoughtColor
 
@@ -152,28 +157,61 @@ private fun FilterColorCircle(
         label = "cornerRadius"
     )
 
-    // Animate check icon scale
-    val checkScale by animateFloatAsState(
+    // Animate check progress (0 to 1)
+    val checkProgress by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
         animationSpec = tween(durationMillis = 200),
-        label = "checkScale"
+        label = "checkProgress"
     )
+
+    // Darken color for border
+    val borderColor = remember(color) {
+        androidx.compose.ui.graphics.Color(
+            red = color.color.red * 0.7f,
+            green = color.color.green * 0.7f,
+            blue = color.color.blue * 0.7f
+        )
+    }
 
     Box(
         modifier = Modifier
             .size(56.dp)
             .clip(RoundedCornerShape(cornerRadius))
+            .background(borderColor)
+            .padding(2.dp)
+            .clip(RoundedCornerShape(cornerRadius))
             .background(color.color)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Check,
-            contentDescription = "已选择",
-            tint = Color.White,
-            modifier = Modifier
-                .size(32.dp)
-                .scale(checkScale)
-        )
+        // Animated check mark from left to right
+        Canvas(modifier = Modifier.size(32.dp)) {
+            if (checkProgress > 0f) {
+                val checkPath = Path().apply {
+                    // Check mark path
+                    moveTo(size.width * 0.2f, size.height * 0.5f)
+                    lineTo(size.width * 0.4f, size.height * 0.7f)
+                    lineTo(size.width * 0.8f, size.height * 0.3f)
+                }
+
+                // Clip the path based on progress
+                clipRect(
+                    left = 0f,
+                    top = 0f,
+                    right = size.width * checkProgress,
+                    bottom = size.height
+                ) {
+                    drawPath(
+                        path = checkPath,
+                        color = Color.White,
+                        style = Stroke(
+                            width = 4.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
+            }
+        }
     }
 }

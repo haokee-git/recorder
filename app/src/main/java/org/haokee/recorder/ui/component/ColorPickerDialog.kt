@@ -107,18 +107,23 @@ private fun ColorCircle(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    // Darken color for border
+    val borderColor = remember(color) {
+        Color(
+            red = color.color.red * 0.7f,
+            green = color.color.green * 0.7f,
+            blue = color.color.blue * 0.7f
+        )
+    }
+
     Box(
         modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
+            .background(borderColor)
+            .padding(2.dp)
+            .clip(CircleShape)
             .background(color.color)
-            .then(
-                if (isSelected) Modifier.border(
-                    width = 3.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = CircleShape
-                ) else Modifier
-            )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
