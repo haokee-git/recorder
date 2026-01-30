@@ -16,9 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.drawLine
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -271,7 +273,17 @@ fun RecorderScreen(
     }
 
     // Color filter dropdown (no dialog, just show/hide)
-    if (showColorFilter) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = showColorFilter,
+        enter = androidx.compose.animation.slideInVertically(
+            animationSpec = tween(durationMillis = 300),
+            initialOffsetY = { -it }
+        ),
+        exit = androidx.compose.animation.slideOutVertically(
+            animationSpec = tween(durationMillis = 300),
+            targetOffsetY = { -it }
+        )
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -292,15 +304,12 @@ fun RecorderScreen(
                     }
                     viewModel.setColorFilter(currentColors.toList())
                 },
-                onSelectAll = {
-                    viewModel.setColorFilter(org.haokee.recorder.data.model.ThoughtColor.entries)
-                },
                 onClearAll = {
                     viewModel.setColorFilter(emptyList())
                 },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 120.dp, end = 16.dp)
+                    .padding(top = 56.dp, end = 16.dp)
             )
         }
     }
@@ -430,20 +439,19 @@ private fun SelectionInfoBar(
 private fun ColorFilterDropdown(
     selectedColors: List<org.haokee.recorder.data.model.ThoughtColor>,
     onColorToggle: (org.haokee.recorder.data.model.ThoughtColor) -> Unit,
-    onSelectAll: () -> Unit,
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.width(220.dp),
+        modifier = modifier.width(200.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Color grid
+            // Color grid - Row 1
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -456,6 +464,7 @@ private fun ColorFilterDropdown(
                     )
                 }
             }
+            // Color grid - Row 2
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -468,21 +477,20 @@ private fun ColorFilterDropdown(
                     )
                 }
             }
-
-            // All/Clear buttons
+            // Row 3: No Color + Clear button
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(
-                    onClick = onSelectAll,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("全选", style = MaterialTheme.typography.bodySmall)
-                }
+                NoColorFilterCircle(
+                    isSelected = selectedColors.isEmpty(),
+                    onClick = onClearAll
+                )
                 TextButton(
                     onClick = onClearAll,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text("清除", style = MaterialTheme.typography.bodySmall)
                 }
@@ -555,6 +563,43 @@ private fun FilterColorCircle(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NoColorFilterCircle(
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isSelected) 8.dp else 28.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "cornerRadius"
+    )
+
+    val innerCornerRadius = (cornerRadius - 1.dp).coerceAtLeast(0.dp)
+
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(androidx.compose.ui.graphics.Color.Red)
+            .padding(1.dp)
+            .clip(RoundedCornerShape(innerCornerRadius))
+            .background(androidx.compose.ui.graphics.Color.White)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        // Draw diagonal slash that extends from corner to corner
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawLine(
+                color = androidx.compose.ui.graphics.Color.Red,
+                start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+                strokeWidth = 3.dp.toPx(),
+                cap = StrokeCap.Square
+            )
         }
     }
 }
