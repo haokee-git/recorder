@@ -2,9 +2,12 @@ package org.haokee.recorder.ui.component
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -22,15 +25,68 @@ fun ThoughtList(
     isPlaying: Boolean,
     playbackProgress: Float = 0f,
     isRecording: Boolean = false,
+    scrollToThoughtId: String? = null,
     onThoughtClick: (Thought) -> Unit,
     onCheckboxClick: (Thought) -> Unit,
     onPlayClick: (Thought) -> Unit,
+    onScrollComplete: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberLazyListState()
+
+    // Handle auto-scroll to newly created/converted thought
+    LaunchedEffect(scrollToThoughtId) {
+        scrollToThoughtId?.let { targetId ->
+            // Calculate the index position of the target thought
+            var index = 0
+
+            // Check in transcribed thoughts
+            if (transcribedThoughts.isNotEmpty()) {
+                index++ // Section header
+                val transcribedIndex = transcribedThoughts.indexOfFirst { it.id == targetId }
+                if (transcribedIndex >= 0) {
+                    index += transcribedIndex
+                    listState.animateScrollToItem(index)
+                    onScrollComplete()
+                    return@LaunchedEffect
+                }
+                index += transcribedThoughts.size
+            }
+
+            // Check in original thoughts
+            if (originalThoughts.isNotEmpty()) {
+                index++ // Section header
+                val originalIndex = originalThoughts.indexOfFirst { it.id == targetId }
+                if (originalIndex >= 0) {
+                    index += originalIndex
+                    listState.animateScrollToItem(index)
+                    onScrollComplete()
+                    return@LaunchedEffect
+                }
+                index += originalThoughts.size
+            }
+
+            // Check in expired alarm thoughts
+            if (expiredAlarmThoughts.isNotEmpty()) {
+                index++ // Section header
+                val expiredIndex = expiredAlarmThoughts.indexOfFirst { it.id == targetId }
+                if (expiredIndex >= 0) {
+                    index += expiredIndex
+                    listState.animateScrollToItem(index)
+                    onScrollComplete()
+                    return@LaunchedEffect
+                }
+            }
+
+            // If not found, still clear the scroll request
+            onScrollComplete()
+        }
+    }
     if (transcribedThoughts.isEmpty() && originalThoughts.isEmpty() && expiredAlarmThoughts.isEmpty()) {
         EmptyState(modifier = modifier)
     } else {
         LazyColumn(
+            state = listState,
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)

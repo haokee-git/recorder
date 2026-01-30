@@ -23,7 +23,8 @@ data class ThoughtListUiState(
     val isMultiSelectMode: Boolean = false,
     val selectedColors: List<ThoughtColor> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val scrollToThoughtId: String? = null
 )
 
 class ThoughtListViewModel(
@@ -135,11 +136,12 @@ class ThoughtListViewModel(
                     )
                     repository.insertThought(thought)
 
-                    // Auto-select the new thought (single selection)
+                    // Auto-select the new thought (single selection) and scroll to it
                     _uiState.update { state ->
                         state.copy(
                             selectedThoughts = setOf(thought.id),
-                            isMultiSelectMode = true
+                            isMultiSelectMode = true,
+                            scrollToThoughtId = thought.id
                         )
                     }
                 }
@@ -245,6 +247,10 @@ class ThoughtListViewModel(
         _uiState.update { it.copy(error = null) }
     }
 
+    fun clearScrollRequest() {
+        _uiState.update { it.copy(scrollToThoughtId = null) }
+    }
+
     // Phase 2: Speech-to-text functions
     fun convertSelectedThoughts() {
         viewModelScope.launch {
@@ -276,12 +282,13 @@ class ThoughtListViewModel(
 
             _uiState.update { it.copy(isLoading = false) }
 
-            // Auto-select the first converted thought (single selection)
+            // Auto-select the first converted thought (single selection) and scroll to it
             if (firstThoughtId != null) {
                 _uiState.update { state ->
                     state.copy(
                         selectedThoughts = setOf(firstThoughtId),
-                        isMultiSelectMode = true
+                        isMultiSelectMode = true,
+                        scrollToThoughtId = firstThoughtId
                     )
                 }
             } else {

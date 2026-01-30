@@ -150,6 +150,7 @@ fun RecorderScreen(
                     playbackState.currentPosition.toFloat() / playbackState.duration.toFloat()
                 } else 0f,
                 isRecording = recordingState.isRecording,
+                scrollToThoughtId = uiState.scrollToThoughtId,
                 onThoughtClick = { thought ->
                     // Click on card - play audio
                     if (playbackState.currentThoughtId == thought.id && playbackState.isPlaying) {
@@ -172,6 +173,9 @@ fun RecorderScreen(
                     } else {
                         viewModel.playThought(thought)
                     }
+                },
+                onScrollComplete = {
+                    viewModel.clearScrollRequest()
                 },
                 modifier = Modifier.weight(1f)
             )
