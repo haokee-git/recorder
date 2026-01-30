@@ -292,32 +292,10 @@ fun ExpiredThoughtItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Checkbox on the left
-                Box(
-                    modifier = Modifier
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(6.dp)
-                    )
-                    .clickable(onClick = onCheckboxClick),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "已选中",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
+                AnimatedCheckbox(
+                    isSelected = isSelected,
+                    onClick = onCheckboxClick
+                )
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -415,12 +393,11 @@ private fun AnimatedCheckbox(
         label = "cornerRadius"
     )
 
-    // Animate border width: 0.dp to 1.dp
-    val borderWidth by animateDpAsState(
-        targetValue = if (isSelected) 1.dp else 0.dp,
-        animationSpec = tween(durationMillis = 200),
-        label = "borderWidth"
-    )
+    // Border width is always 1.dp
+    val borderWidth = 1.dp
+
+    // Border color changes based on selection
+    val borderColor = if (isSelected) primaryColor else MaterialTheme.colorScheme.outline
 
     // Animate check progress (0 to 1)
     val checkProgress by animateFloatAsState(
@@ -435,12 +412,10 @@ private fun AnimatedCheckbox(
     Box(
         modifier = modifier
             .size(24.dp)
-            .then(
-                if (borderWidth > 0.dp) Modifier.border(
-                    width = borderWidth,
-                    color = primaryColor,
-                    shape = RoundedCornerShape(cornerRadius)
-                ) else Modifier
+            .border(
+                width = borderWidth,
+                color = borderColor,
+                shape = RoundedCornerShape(cornerRadius)
             )
             .clip(RoundedCornerShape(cornerRadius))
             .background(if (isSelected) primaryColor else Color.White)

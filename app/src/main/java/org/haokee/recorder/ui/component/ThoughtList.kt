@@ -1,7 +1,10 @@
 package org.haokee.recorder.ui.component
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -123,7 +126,7 @@ fun ThoughtList(
         ) {
             // Transcribed thoughts section
             if (transcribedThoughts.isNotEmpty()) {
-                item {
+                item(key = "transcribed_header") {
                     SectionHeader(
                         text = "已转换感言",
                         isCollapsed = transcribedCollapsed,
@@ -135,11 +138,6 @@ fun ThoughtList(
                         items = transcribedThoughts,
                         key = { it.id }
                     ) { thought ->
-                        val alpha by animateFloatAsState(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 300),
-                            label = "itemAlpha"
-                        )
                         TranscribedThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -149,7 +147,9 @@ fun ThoughtList(
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
                             onPlayClick = { onPlayClick(thought) },
-                            modifier = Modifier.alpha(alpha)
+                            modifier = Modifier.animateItemPlacement(
+                                animationSpec = tween(durationMillis = 300)
+                            )
                         )
                     }
                 }
@@ -157,7 +157,7 @@ fun ThoughtList(
 
             // Original thoughts section
             if (originalThoughts.isNotEmpty()) {
-                item {
+                item(key = "original_header") {
                     SectionHeader(
                         text = "原始感言",
                         isCollapsed = originalCollapsed,
@@ -169,11 +169,6 @@ fun ThoughtList(
                         items = originalThoughts,
                         key = { it.id }
                     ) { thought ->
-                        val alpha by animateFloatAsState(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 300),
-                            label = "itemAlpha"
-                        )
                         OriginalThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -183,7 +178,9 @@ fun ThoughtList(
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
                             onPlayClick = { onPlayClick(thought) },
-                            modifier = Modifier.alpha(alpha)
+                            modifier = Modifier.animateItemPlacement(
+                                animationSpec = tween(durationMillis = 300)
+                            )
                         )
                     }
                 }
@@ -191,7 +188,7 @@ fun ThoughtList(
 
             // Expired alarm thoughts section
             if (expiredAlarmThoughts.isNotEmpty()) {
-                item {
+                item(key = "expired_header") {
                     SectionHeader(
                         text = "闹钟已过的感言",
                         isCollapsed = expiredCollapsed,
@@ -203,11 +200,6 @@ fun ThoughtList(
                         items = expiredAlarmThoughts,
                         key = { it.id }
                     ) { thought ->
-                        val alpha by animateFloatAsState(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 300),
-                            label = "itemAlpha"
-                        )
                         ExpiredThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -217,7 +209,9 @@ fun ThoughtList(
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
                             onPlayClick = { onPlayClick(thought) },
-                            modifier = Modifier.alpha(alpha)
+                            modifier = Modifier.animateItemPlacement(
+                                animationSpec = tween(durationMillis = 300)
+                            )
                         )
                     }
                 }

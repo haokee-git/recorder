@@ -131,32 +131,28 @@ fun RecorderScreen(
                 }
             )
 
-            // Selection info bar
-            if (uiState.selectedThoughts.isNotEmpty()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shadowElevation = 2.dp
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+            // Selection info bar (always visible)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (uiState.selectedThoughts.isEmpty()) "未选择" else "已选择 ${uiState.selectedThoughts.size} 条感言",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (uiState.selectedThoughts.isNotEmpty()) {
+                    TextButton(
+                        onClick = { viewModel.clearSelection() },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
-                        Text(
-                            text = "已选择 ${uiState.selectedThoughts.size} 条感言",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        TextButton(
-                            onClick = { viewModel.clearSelection() },
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text("清除选中")
-                        }
+                        Text("清除选中", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
