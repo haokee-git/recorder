@@ -393,6 +393,9 @@ private fun AnimatedCheckbox(
         label = "cornerRadius"
     )
 
+    // Save primary color for use in Canvas and border
+    val primaryColor = MaterialTheme.colorScheme.primary
+
     // Border width is always 1.dp
     val borderWidth = 1.dp
 
@@ -405,9 +408,6 @@ private fun AnimatedCheckbox(
         animationSpec = tween(durationMillis = 200),
         label = "checkProgress"
     )
-
-    // Save primary color for use in Canvas
-    val primaryColor = MaterialTheme.colorScheme.primary
 
     Box(
         modifier = modifier
