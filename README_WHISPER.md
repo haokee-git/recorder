@@ -15,26 +15,28 @@
 2. 将 AAR 文件放入 `app/libs/` 目录
 3. 如果下载的是不同版本，请同时修改 `app/build.gradle.kts` 中的文件名
 
-### 2. Whisper Tiny 模型文件
+### 2. Whisper Tiny 模型文件（多语言版本）
 
-**模型包**: `sherpa-onnx-whisper-tiny.en.tar.bz2`
+**模型包**: `sherpa-onnx-whisper-tiny.tar.bz2`
 **解压后大小**: ~75 MB
-**下载地址**: [直接下载链接](https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2)
+**下载地址**: [直接下载链接](https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2)
+
+**重要提示**：使用**多语言版本**（不带 `.en` 后缀），支持中英文混合识别
 
 **所需文件**:
-- `tiny.en-encoder.int8.onnx` - 编码器模型
-- `tiny.en-decoder.int8.onnx` - 解码器模型
-- `tiny.en-tokens.txt` - Token 映射表
+- `tiny-encoder.int8.onnx` - 编码器模型
+- `tiny-decoder.int8.onnx` - 解码器模型
+- `tiny-tokens.txt` - Token 映射表
 
 **安装步骤**:
-1. 下载并解压 `sherpa-onnx-whisper-tiny.en.tar.bz2`
+1. 下载并解压 `sherpa-onnx-whisper-tiny.tar.bz2`（注意：**不是** `.en` 版本）
 2. 在项目中创建目录：`app/src/main/assets/models/whisper-tiny/`
 3. 将以下文件复制到该目录：
    ```
    app/src/main/assets/models/whisper-tiny/
-   ├── tiny.en-encoder.int8.onnx
-   ├── tiny.en-decoder.int8.onnx
-   └── tiny.en-tokens.txt
+   ├── tiny-encoder.int8.onnx
+   ├── tiny-decoder.int8.onnx
+   └── tiny-tokens.txt
    ```
 
 ## 文件结构
@@ -51,9 +53,9 @@ AndroidProject/
 │           └── assets/
 │               └── models/
 │                   └── whisper-tiny/
-│                       ├── tiny.en-encoder.int8.onnx
-│                       ├── tiny.en-decoder.int8.onnx
-│                       └── tiny.en-tokens.txt
+│                       ├── tiny-encoder.int8.onnx
+│                       ├── tiny-decoder.int8.onnx
+│                       └── tiny-tokens.txt
 └── ...
 ```
 
@@ -68,6 +70,7 @@ AndroidProject/
 ## 使用方法
 
 1. **录制音频**：点击右下角麦克风按钮录制感言
+   - 支持纯中文、纯英文、中英文混合语音
 2. **转换为文本**：
    - 选中一条或多条原始感言
    - 点击工具栏"批量转换"按钮
@@ -82,11 +85,16 @@ A: Whisper tiny 是最小的模型（~75MB）。如果希望进一步减小体�
 - 使用量化版本（已经是 int8 量化）
 - 首次启动时从网络下载模型（需修改代码）
 
-### Q: 支持中文吗？
+### Q: 支持中文和英文混合识别吗？
 
-A: 当前使用的是 `tiny.en` 英文专用模型。如需支持中文，请：
-1. 下载多语言模型 `sherpa-onnx-whisper-tiny.tar.bz2`（无 `.en` 后缀）
-2. 修改 `WhisperHelper.kt` 中的文件名和语言配置
+A: ✅ **支持！** 本项目使用的是 Whisper **多语言版本**（`tiny.tar.bz2`），可以：
+- 识别纯中文语音
+- 识别纯英文语音
+- 识别中英文混合语音
+
+配置已设置为 `language = "zh"`，优先识别中文，同时能自动处理英文。
+
+**注意**：如果您之前下载的是 `tiny.en` 英文专用版本，请按照上面的安装步骤重新下载多语言版本。
 
 ### Q: 识别准确率不高怎么办？
 

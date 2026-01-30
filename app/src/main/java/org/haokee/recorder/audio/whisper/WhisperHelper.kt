@@ -17,22 +17,25 @@ import java.io.File
  * Requirements:
  * 1. AAR file: sherpa-onnx-static-link-onnxruntime-1.12.23.aar in app/libs/
  * 2. Model files in app/src/main/assets/models/whisper-tiny/:
- *    - tiny.en-encoder.int8.onnx
- *    - tiny.en-decoder.int8.onnx
- *    - tiny.en-tokens.txt
+ *    - tiny-encoder.int8.onnx
+ *    - tiny-decoder.int8.onnx
+ *    - tiny-tokens.txt
  *
  * Download links:
  * - AAR: https://github.com/k2-fsa/sherpa-onnx/releases/tag/v1.12.23
- * - Models: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2
+ * - Models: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2
+ *
+ * Note: Using multilingual model to support Chinese and English mixed speech recognition
  */
 class WhisperHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "WhisperHelper"
         private const val MODEL_DIR = "models/whisper-tiny"
-        private const val ENCODER_FILE = "tiny.en-encoder.int8.onnx"
-        private const val DECODER_FILE = "tiny.en-decoder.int8.onnx"
-        private const val TOKENS_FILE = "tiny.en-tokens.txt"
+        // Multilingual model files (supports Chinese and English)
+        private const val ENCODER_FILE = "tiny-encoder.int8.onnx"
+        private const val DECODER_FILE = "tiny-decoder.int8.onnx"
+        private const val TOKENS_FILE = "tiny-tokens.txt"
 
         @Volatile
         private var instance: WhisperHelper? = null
@@ -72,7 +75,7 @@ class WhisperHelper(private val context: Context) {
             val whisperConfig = OfflineWhisperModelConfig(
                 encoder = "$MODEL_DIR/$ENCODER_FILE",
                 decoder = "$MODEL_DIR/$DECODER_FILE",
-                language = "en",  // English language
+                language = "zh",  // Chinese language (also recognizes English in mixed speech)
                 task = "transcribe"
             )
 
