@@ -105,39 +105,46 @@ fun RecorderScreen(
                         allThoughts.find { it.id == id }?.isTranscribed == true
                     }
 
-            ThoughtToolbar(
-                hasSelection = uiState.selectedThoughts.isNotEmpty(),
-                isSingleSelection = uiState.selectedThoughts.size == 1,
-                isAllTranscribed = isAllTranscribed,
-                onBatchConvertClick = {
-                    viewModel.convertSelectedThoughts()
-                },
-                onEditClick = {
-                    // Get the single selected thought
-                    val selectedId = uiState.selectedThoughts.firstOrNull()
-                    if (selectedId != null) {
-                        editingThought = allThoughts.find { it.id == selectedId }
-                    }
-                },
-                onSetAlarmClick = {
-                    showAlarmPicker = true
-                },
-                onSetColorClick = {
-                    showColorPicker = true
-                },
-                onDeleteClick = {
-                    viewModel.deleteSelectedThoughts()
-                },
-                onFilterClick = {
-                    showColorFilter = true
+            // Toolbar and Selection Info (merged in one Surface for consistent shadow)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 4.dp
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    ThoughtToolbar(
+                        hasSelection = uiState.selectedThoughts.isNotEmpty(),
+                        isSingleSelection = uiState.selectedThoughts.size == 1,
+                        isAllTranscribed = isAllTranscribed,
+                        onBatchConvertClick = {
+                            viewModel.convertSelectedThoughts()
+                        },
+                        onEditClick = {
+                            // Get the single selected thought
+                            val selectedId = uiState.selectedThoughts.firstOrNull()
+                            if (selectedId != null) {
+                                editingThought = allThoughts.find { it.id == selectedId }
+                            }
+                        },
+                        onSetAlarmClick = {
+                            showAlarmPicker = true
+                        },
+                        onSetColorClick = {
+                            showColorPicker = true
+                        },
+                        onDeleteClick = {
+                            viewModel.deleteSelectedThoughts()
+                        },
+                        onFilterClick = {
+                            showColorFilter = true
+                        }
+                    )
+                    // Selection info bar (always visible)
+                    SelectionInfoBar(
+                        selectedCount = uiState.selectedThoughts.size,
+                        onClearSelection = { viewModel.clearSelection() }
+                    )
                 }
-            )
-
-            // Selection info bar (always visible)
-            SelectionInfoBar(
-                selectedCount = uiState.selectedThoughts.size,
-                onClearSelection = { viewModel.clearSelection() }
-            )
+            }
 
             // Thought list
             ThoughtList(
@@ -347,35 +354,30 @@ private fun SelectionInfoBar(
     selectedCount: Int,
     onClearSelection: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Text(
+            text = "已选择 $selectedCount 条感言",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        IconButton(
+            onClick = onClearSelection,
+            enabled = selectedCount > 0
         ) {
-            Text(
-                text = "已选择 $selectedCount 条感言",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "清除选中",
+                tint = if (selectedCount > 0)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
-            IconButton(
-                onClick = onClearSelection,
-                enabled = selectedCount > 0
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "清除选中",
-                    tint = if (selectedCount > 0)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                )
-            }
         }
     }
 }

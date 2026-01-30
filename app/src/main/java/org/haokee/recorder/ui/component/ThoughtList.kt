@@ -138,18 +138,11 @@ fun ThoughtList(
                         )
                     )
                 }
-                items(
-                    items = transcribedThoughts,
-                    key = { it.id }
-                ) { thought ->
-                    AnimatedVisibility(
-                        visible = !transcribedCollapsed,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 300)),
-                        exit = fadeOut(animationSpec = tween(durationMillis = 200)),
-                        modifier = Modifier.animateItemPlacement(
-                            animationSpec = tween(durationMillis = 200)
-                        )
-                    ) {
+                if (!transcribedCollapsed) {
+                    items(
+                        items = transcribedThoughts,
+                        key = { it.id }
+                    ) { thought ->
                         TranscribedThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -158,7 +151,10 @@ fun ThoughtList(
                             isRecording = isRecording,
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
-                            onPlayClick = { onPlayClick(thought) }
+                            onPlayClick = { onPlayClick(thought) },
+                            modifier = Modifier.animateItemPlacement(
+                                animationSpec = tween(durationMillis = 200)
+                            )
                         )
                     }
                 }
@@ -176,18 +172,11 @@ fun ThoughtList(
                         )
                     )
                 }
-                items(
-                    items = originalThoughts,
-                    key = { it.id }
-                ) { thought ->
-                    AnimatedVisibility(
-                        visible = !originalCollapsed,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 300)),
-                        exit = fadeOut(animationSpec = tween(durationMillis = 200)),
-                        modifier = Modifier.animateItemPlacement(
-                            animationSpec = tween(durationMillis = 200)
-                        )
-                    ) {
+                if (!originalCollapsed) {
+                    items(
+                        items = originalThoughts,
+                        key = { it.id }
+                    ) { thought ->
                         OriginalThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -196,7 +185,10 @@ fun ThoughtList(
                             isRecording = isRecording,
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
-                            onPlayClick = { onPlayClick(thought) }
+                            onPlayClick = { onPlayClick(thought) },
+                            modifier = Modifier.animateItemPlacement(
+                                animationSpec = tween(durationMillis = 200)
+                            )
                         )
                     }
                 }
@@ -208,24 +200,19 @@ fun ThoughtList(
                     SectionHeader(
                         text = "闹钟已过的感言",
                         isCollapsed = expiredCollapsed,
-                        onToggleCollapse = { expiredCollapsed = !expiredCollapsed },
+                        onToggleCollapse = {
+                            expiredCollapsed = !expiredCollapsed
+                        },
                         modifier = Modifier.animateItemPlacement(
                             animationSpec = tween(durationMillis = 200)
                         )
                     )
                 }
-                items(
-                    items = expiredAlarmThoughts,
-                    key = { it.id }
-                ) { thought ->
-                    AnimatedVisibility(
-                        visible = !expiredCollapsed,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 300)),
-                        exit = fadeOut(animationSpec = tween(durationMillis = 200)),
-                        modifier = Modifier.animateItemPlacement(
-                            animationSpec = tween(durationMillis = 200)
-                        )
-                    ) {
+                if (!expiredCollapsed) {
+                    items(
+                        items = expiredAlarmThoughts,
+                        key = { it.id }
+                    ) { thought ->
                         ExpiredThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -234,7 +221,10 @@ fun ThoughtList(
                             isRecording = isRecording,
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
-                            onPlayClick = { onPlayClick(thought) }
+                            onPlayClick = { onPlayClick(thought) },
+                            modifier = Modifier.animateItemPlacement(
+                                animationSpec = tween(durationMillis = 200)
+                            )
                         )
                     }
                 }
