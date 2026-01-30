@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
@@ -41,6 +43,7 @@ fun ThoughtList(
     onThoughtClick: (Thought) -> Unit,
     onCheckboxClick: (Thought) -> Unit,
     onPlayClick: (Thought) -> Unit,
+    onSelectAllInSection: (List<Thought>, Boolean) -> Unit = { _, _ -> },
     onScrollComplete: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -129,10 +132,15 @@ fun ThoughtList(
             // Transcribed thoughts section
             if (transcribedThoughts.isNotEmpty()) {
                 item(key = "transcribed_header") {
+                    val isAllSelected = transcribedThoughts.all { it.id in selectedThoughts }
                     SectionHeader(
                         text = "已转换感言",
                         isCollapsed = transcribedCollapsed,
+                        isAllSelected = isAllSelected,
                         onToggleCollapse = { transcribedCollapsed = !transcribedCollapsed },
+                        onSelectAll = {
+                            onSelectAllInSection(transcribedThoughts, !isAllSelected)
+                        },
                         modifier = Modifier.animateItemPlacement(
                             animationSpec = tween(durationMillis = 200)
                         )
@@ -163,10 +171,15 @@ fun ThoughtList(
             // Original thoughts section
             if (originalThoughts.isNotEmpty()) {
                 item(key = "original_header") {
+                    val isAllSelected = originalThoughts.all { it.id in selectedThoughts }
                     SectionHeader(
                         text = "原始感言",
                         isCollapsed = originalCollapsed,
+                        isAllSelected = isAllSelected,
                         onToggleCollapse = { originalCollapsed = !originalCollapsed },
+                        onSelectAll = {
+                            onSelectAllInSection(originalThoughts, !isAllSelected)
+                        },
                         modifier = Modifier.animateItemPlacement(
                             animationSpec = tween(durationMillis = 200)
                         )
@@ -197,11 +210,16 @@ fun ThoughtList(
             // Expired alarm thoughts section
             if (expiredAlarmThoughts.isNotEmpty()) {
                 item(key = "expired_header") {
+                    val isAllSelected = expiredAlarmThoughts.all { it.id in selectedThoughts }
                     SectionHeader(
                         text = "闹钟已过的感言",
                         isCollapsed = expiredCollapsed,
+                        isAllSelected = isAllSelected,
                         onToggleCollapse = {
                             expiredCollapsed = !expiredCollapsed
+                        },
+                        onSelectAll = {
+                            onSelectAllInSection(expiredAlarmThoughts, !isAllSelected)
                         },
                         modifier = Modifier.animateItemPlacement(
                             animationSpec = tween(durationMillis = 200)
@@ -242,29 +260,54 @@ fun ThoughtList(
 private fun SectionHeader(
     text: String,
     isCollapsed: Boolean,
+    isAllSelected: Boolean,
     onToggleCollapse: () -> Unit,
+    onSelectAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggleCollapse)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = text,
-            fontSize = 18.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable(onClick = onToggleCollapse)
         )
-        IconButton(onClick = onToggleCollapse) {
-            Icon(
-                imageVector = if (isCollapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
-                contentDescription = if (isCollapsed) "展开" else "折叠",
-                tint = MaterialTheme.colorScheme.primary
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = onSelectAll,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+            ) {
+                Icon(
+                    imageVector = if (isAllSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                Text("全选", style = MaterialTheme.typography.bodySmall)
+            }
+            IconButton(
+                onClick = onToggleCollapse,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = if (isCollapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isCollapsed) "展开" else "折叠",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }

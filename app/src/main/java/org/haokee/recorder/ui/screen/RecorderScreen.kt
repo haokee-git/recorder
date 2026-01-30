@@ -35,7 +35,7 @@ fun RecorderScreen(
     // Color picker dialog state
     var showColorPicker by remember { mutableStateOf(false) }
 
-    // Color filter dialog state
+    // Color filter dropdown state
     var showColorFilter by remember { mutableStateOf(false) }
 
     // Alarm time picker dialog state
@@ -172,6 +172,13 @@ fun RecorderScreen(
                 onCheckboxClick = { thought ->
                     // Click on checkbox - toggle selection
                     viewModel.toggleThoughtSelection(thought.id)
+                },
+                onSelectAllInSection = { thoughts, selectAll ->
+                    if (selectAll) {
+                        thoughts.forEach { viewModel.toggleThoughtSelection(it.id) }
+                    } else {
+                        thoughts.forEach { if (it.id in uiState.selectedThoughts) viewModel.toggleThoughtSelection(it.id) }
+                    }
                 },
                 onPlayClick = { thought ->
                     if (playbackState.currentThoughtId == thought.id && playbackState.isPlaying) {
@@ -357,27 +364,31 @@ private fun SelectionInfoBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "已选择 $selectedCount 条感言",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface
         )
-        IconButton(
+        TextButton(
             onClick = onClearSelection,
-            enabled = selectedCount > 0
+            enabled = selectedCount > 0,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary,
+                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            ),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "清除选中",
-                tint = if (selectedCount > 0)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
             )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("清除选中", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
