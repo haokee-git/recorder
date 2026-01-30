@@ -63,8 +63,8 @@ fun ColorPickerDialog(
                     onClick = { selectedColor = null },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text(
@@ -121,7 +121,7 @@ private fun ColorCircle(
             .size(56.dp)
             .clip(CircleShape)
             .background(borderColor)
-            .padding(2.dp)
+            .padding(1.dp)
             .clip(CircleShape)
             .background(color.color)
             .clickable(onClick = onClick),

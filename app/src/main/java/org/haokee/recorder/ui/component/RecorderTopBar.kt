@@ -41,7 +41,8 @@ fun RecorderTopBar(
             IconButton(onClick = onChatClick) {
                 Icon(
                     imageVector = Icons.Default.Message,
-                    contentDescription = "大模型对话"
+                    contentDescription = "大模型对话",
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         },
@@ -49,7 +50,8 @@ fun RecorderTopBar(
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "设置"
+                    contentDescription = "设置",
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         },

@@ -45,7 +45,7 @@ fun TranscribedThoughtItem(
             .clickable(onClick = onClick)
             .then(
                 if (isSelected) Modifier.border(
-                    width = 2.dp,
+                    width = 1.dp,
                     color = MaterialTheme.colorScheme.primary,
                     shape = MaterialTheme.shapes.medium
                 ) else Modifier
@@ -78,7 +78,7 @@ fun TranscribedThoughtItem(
                         else MaterialTheme.colorScheme.surfaceVariant
                     )
                     .border(
-                        width = 2.dp,
+                        width = 1.dp,
                         color = if (isSelected) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.outline,
                         shape = RoundedCornerShape(6.dp)
@@ -177,7 +177,7 @@ fun OriginalThoughtItem(
             .clickable(onClick = onClick)
             .then(
                 if (isSelected) Modifier.border(
-                    width = 2.dp,
+                    width = 1.dp,
                     color = MaterialTheme.colorScheme.primary,
                     shape = MaterialTheme.shapes.medium
                 ) else Modifier
@@ -210,7 +210,7 @@ fun OriginalThoughtItem(
                         else MaterialTheme.colorScheme.surfaceVariant
                     )
                     .border(
-                        width = 2.dp,
+                        width = 1.dp,
                         color = if (isSelected) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.outline,
                         shape = RoundedCornerShape(6.dp)
@@ -304,7 +304,7 @@ fun ExpiredThoughtItem(
             .clickable(onClick = onClick)
             .then(
                 if (isSelected) Modifier.border(
-                    width = 2.dp,
+                    width = 1.dp,
                     color = MaterialTheme.colorScheme.primary,
                     shape = MaterialTheme.shapes.medium
                 ) else Modifier
@@ -340,7 +340,7 @@ fun ExpiredThoughtItem(
                         else MaterialTheme.colorScheme.surfaceVariant
                     )
                     .border(
-                        width = 2.dp,
+                        width = 1.dp,
                         color = if (isSelected) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.outline,
                         shape = RoundedCornerShape(6.dp)

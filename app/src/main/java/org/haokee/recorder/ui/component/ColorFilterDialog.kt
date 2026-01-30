@@ -92,8 +92,8 @@ fun ColorFilterDialog(
                             currentSelection = emptySet()
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Icon(
@@ -178,7 +178,7 @@ private fun FilterColorCircle(
             .size(56.dp)
             .clip(RoundedCornerShape(cornerRadius))
             .background(borderColor)
-            .padding(2.dp)
+            .padding(1.dp)
             .clip(RoundedCornerShape(cornerRadius))
             .background(color.color)
             .clickable(onClick = onClick),

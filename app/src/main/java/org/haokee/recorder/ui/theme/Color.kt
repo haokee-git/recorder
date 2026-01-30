@@ -2,10 +2,16 @@ package org.haokee.recorder.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Light theme colors - Blue theme
+val Blue80 = Color(0xFF2196F3)      // Primary blue
+val BlueGrey80 = Color(0xFF90CAF9)  // Light blue
+val LightBlue80 = Color(0xFFBBDEFB) // Very light blue
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val Blue40 = Color(0xFF1976D2)      // Dark blue
+val BlueGrey40 = Color(0xFF42A5F5)  // Medium blue
+val LightBlue40 = Color(0xFF64B5F6) // Light blue
+
+// Dark theme colors - Blue theme
+val BlueDark = Color(0xFF1565C0)    // Dark primary blue
+val BlueGreyDark = Color(0xFF1E88E5) // Dark medium blue
+val LightBlueDark = Color(0xFF42A5F5) // Dark light blue
