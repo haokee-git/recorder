@@ -1,15 +1,22 @@
 package org.haokee.recorder.ui.component
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,6 +40,11 @@ fun ThoughtList(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+
+    // Collapse states for each section
+    var transcribedCollapsed by remember { mutableStateOf(false) }
+    var originalCollapsed by remember { mutableStateOf(false) }
+    var expiredCollapsed by remember { mutableStateOf(false) }
 
     // Handle auto-scroll to newly created/converted thought
     LaunchedEffect(scrollToThoughtId) {
@@ -112,81 +124,141 @@ fun ThoughtList(
             // Transcribed thoughts section
             if (transcribedThoughts.isNotEmpty()) {
                 item {
-                    SectionHeader("已转换感言")
-                }
-                items(
-                    items = transcribedThoughts,
-                    key = { it.id }
-                ) { thought ->
-                    TranscribedThoughtItem(
-                        thought = thought,
-                        isSelected = thought.id in selectedThoughts,
-                        isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
-                        playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
-                        isRecording = isRecording,
-                        onClick = { onThoughtClick(thought) },
-                        onCheckboxClick = { onCheckboxClick(thought) },
-                        onPlayClick = { onPlayClick(thought) }
+                    SectionHeader(
+                        text = "已转换感言",
+                        isCollapsed = transcribedCollapsed,
+                        onToggleCollapse = { transcribedCollapsed = !transcribedCollapsed }
                     )
+                }
+                if (!transcribedCollapsed) {
+                    items(
+                        items = transcribedThoughts,
+                        key = { it.id }
+                    ) { thought ->
+                        val alpha by animateFloatAsState(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 300),
+                            label = "itemAlpha"
+                        )
+                        TranscribedThoughtItem(
+                            thought = thought,
+                            isSelected = thought.id in selectedThoughts,
+                            isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
+                            playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
+                            isRecording = isRecording,
+                            onClick = { onThoughtClick(thought) },
+                            onCheckboxClick = { onCheckboxClick(thought) },
+                            onPlayClick = { onPlayClick(thought) },
+                            modifier = Modifier.alpha(alpha)
+                        )
+                    }
                 }
             }
 
             // Original thoughts section
             if (originalThoughts.isNotEmpty()) {
                 item {
-                    SectionHeader("原始感言")
-                }
-                items(
-                    items = originalThoughts,
-                    key = { it.id }
-                ) { thought ->
-                    OriginalThoughtItem(
-                        thought = thought,
-                        isSelected = thought.id in selectedThoughts,
-                        isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
-                        playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
-                        isRecording = isRecording,
-                        onClick = { onThoughtClick(thought) },
-                        onCheckboxClick = { onCheckboxClick(thought) },
-                        onPlayClick = { onPlayClick(thought) }
+                    SectionHeader(
+                        text = "原始感言",
+                        isCollapsed = originalCollapsed,
+                        onToggleCollapse = { originalCollapsed = !originalCollapsed }
                     )
+                }
+                if (!originalCollapsed) {
+                    items(
+                        items = originalThoughts,
+                        key = { it.id }
+                    ) { thought ->
+                        val alpha by animateFloatAsState(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 300),
+                            label = "itemAlpha"
+                        )
+                        OriginalThoughtItem(
+                            thought = thought,
+                            isSelected = thought.id in selectedThoughts,
+                            isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
+                            playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
+                            isRecording = isRecording,
+                            onClick = { onThoughtClick(thought) },
+                            onCheckboxClick = { onCheckboxClick(thought) },
+                            onPlayClick = { onPlayClick(thought) },
+                            modifier = Modifier.alpha(alpha)
+                        )
+                    }
                 }
             }
 
             // Expired alarm thoughts section
             if (expiredAlarmThoughts.isNotEmpty()) {
                 item {
-                    SectionHeader("闹钟已过的感言")
-                }
-                items(
-                    items = expiredAlarmThoughts,
-                    key = { it.id }
-                ) { thought ->
-                    ExpiredThoughtItem(
-                        thought = thought,
-                        isSelected = thought.id in selectedThoughts,
-                        isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
-                        playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
-                        isRecording = isRecording,
-                        onClick = { onThoughtClick(thought) },
-                        onCheckboxClick = { onCheckboxClick(thought) },
-                        onPlayClick = { onPlayClick(thought) }
+                    SectionHeader(
+                        text = "闹钟已过的感言",
+                        isCollapsed = expiredCollapsed,
+                        onToggleCollapse = { expiredCollapsed = !expiredCollapsed }
                     )
                 }
+                if (!expiredCollapsed) {
+                    items(
+                        items = expiredAlarmThoughts,
+                        key = { it.id }
+                    ) { thought ->
+                        val alpha by animateFloatAsState(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 300),
+                            label = "itemAlpha"
+                        )
+                        ExpiredThoughtItem(
+                            thought = thought,
+                            isSelected = thought.id in selectedThoughts,
+                            isPlaying = thought.id == currentPlayingThoughtId && isPlaying,
+                            playbackProgress = if (thought.id == currentPlayingThoughtId) playbackProgress else 0f,
+                            isRecording = isRecording,
+                            onClick = { onThoughtClick(thought) },
+                            onCheckboxClick = { onCheckboxClick(thought) },
+                            onPlayClick = { onPlayClick(thought) },
+                            modifier = Modifier.alpha(alpha)
+                        )
+                    }
+                }
+            }
+
+            // Spacer for record button
+            item {
+                Spacer(modifier = Modifier.height(96.dp))
             }
         }
     }
 }
 
 @Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text = text,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(vertical = 8.dp)
-    )
+private fun SectionHeader(
+    text: String,
+    isCollapsed: Boolean,
+    onToggleCollapse: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggleCollapse)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = text,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        IconButton(onClick = onToggleCollapse) {
+            Icon(
+                imageVector = if (isCollapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
+                contentDescription = if (isCollapsed) "展开" else "折叠",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
 }
 
 @Composable

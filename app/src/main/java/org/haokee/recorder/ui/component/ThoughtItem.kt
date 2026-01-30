@@ -273,10 +273,7 @@ fun ExpiredThoughtItem(
                     shape = MaterialTheme.shapes.medium
                 ) else Modifier
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box {
             // Color triangle in top-left corner
@@ -438,10 +435,12 @@ private fun AnimatedCheckbox(
     Box(
         modifier = modifier
             .size(24.dp)
-            .border(
-                width = borderWidth,
-                color = primaryColor,
-                shape = RoundedCornerShape(cornerRadius)
+            .then(
+                if (borderWidth > 0.dp) Modifier.border(
+                    width = borderWidth,
+                    color = primaryColor,
+                    shape = RoundedCornerShape(cornerRadius)
+                ) else Modifier
             )
             .clip(RoundedCornerShape(cornerRadius))
             .background(if (isSelected) primaryColor else Color.White)

@@ -86,10 +86,13 @@ fun RecorderScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+        ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
             // Toolbar
             val allThoughts = uiState.transcribedThoughts +
@@ -127,6 +130,36 @@ fun RecorderScreen(
                     showColorFilter = true
                 }
             )
+
+            // Selection info bar
+            if (uiState.selectedThoughts.isNotEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shadowElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "已选择 ${uiState.selectedThoughts.size} 条感言",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        TextButton(
+                            onClick = { viewModel.clearSelection() },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("清除选中")
+                        }
+                    }
+                }
+            }
 
             // Thought list
             ThoughtList(
@@ -169,29 +202,30 @@ fun RecorderScreen(
                 },
                 modifier = Modifier.weight(1f)
             )
+        }
 
-            // Record button at bottom center
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(96.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                RecordButton(
-                    isRecording = recordingState.isRecording,
-                    onClick = {
-                        if (recordingState.isRecording) {
-                            viewModel.stopRecording()
+        // Floating record button at bottom center
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            RecordButton(
+                isRecording = recordingState.isRecording,
+                onClick = {
+                    if (recordingState.isRecording) {
+                        viewModel.stopRecording()
+                    } else {
+                        if (recordAudioPermissionState.status.isGranted) {
+                            viewModel.startRecording()
                         } else {
-                            if (recordAudioPermissionState.status.isGranted) {
-                                viewModel.startRecording()
-                            } else {
-                                recordAudioPermissionState.launchPermissionRequest()
-                            }
+                            recordAudioPermissionState.launchPermissionRequest()
                         }
                     }
-                )
-            }
+                }
+            )
+        }
         }
     }
 

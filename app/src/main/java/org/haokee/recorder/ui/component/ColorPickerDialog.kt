@@ -69,20 +69,16 @@ fun ColorPickerDialog(
                         )
                     }
                 }
-                // Color grid - Row 3 with "No Color" option
+                // Color grid - Row 3 with "No Color" option (centered)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     // No color option
                     NoColorCircle(
                         isSelected = selectedColor == null,
                         onClick = { selectedColor = null }
                     )
-                    // Empty placeholders to maintain grid alignment
-                    Spacer(modifier = Modifier.size(56.dp))
-                    Spacer(modifier = Modifier.size(56.dp))
-                    Spacer(modifier = Modifier.size(56.dp))
                 }
             }
         },
@@ -204,13 +200,6 @@ private fun NoColorCircle(
     // Inner corner radius should be smaller to match the border
     val innerCornerRadius = (cornerRadius - 1.dp).coerceAtLeast(0.dp)
 
-    // Animate check progress (0 to 1)
-    val checkProgress by animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "checkProgress"
-    )
-
     Box(
         modifier = Modifier
             .size(56.dp)
@@ -222,43 +211,15 @@ private fun NoColorCircle(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // Draw diagonal slash
-        Canvas(modifier = Modifier.size(32.dp)) {
+        // Draw diagonal slash that extends from corner to corner
+        Canvas(modifier = Modifier.fillMaxSize()) {
             drawLine(
                 color = Color.Red,
-                start = Offset(size.width * 0.2f, size.height * 0.2f),
-                end = Offset(size.width * 0.8f, size.height * 0.8f),
+                start = Offset(0f, 0f),
+                end = Offset(size.width, size.height),
                 strokeWidth = 3.dp.toPx(),
-                cap = StrokeCap.Round
+                cap = StrokeCap.Square
             )
-
-            // Animated check mark from left to right
-            if (checkProgress > 0f) {
-                val checkPath = Path().apply {
-                    // Check mark path
-                    moveTo(size.width * 0.2f, size.height * 0.5f)
-                    lineTo(size.width * 0.4f, size.height * 0.7f)
-                    lineTo(size.width * 0.8f, size.height * 0.3f)
-                }
-
-                // Clip the path based on progress
-                clipRect(
-                    left = 0f,
-                    top = 0f,
-                    right = size.width * checkProgress,
-                    bottom = size.height
-                ) {
-                    drawPath(
-                        path = checkPath,
-                        color = Color.Red,
-                        style = Stroke(
-                            width = 4.dp.toPx(),
-                            cap = StrokeCap.Round,
-                            join = StrokeJoin.Round
-                        )
-                    )
-                }
-            }
         }
     }
 }
