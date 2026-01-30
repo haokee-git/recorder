@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Edit
@@ -76,8 +76,9 @@ fun ThoughtToolbar(
 
             IconButton(onClick = onFilterClick) {
                 Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "筛选"
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = "筛选",
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
