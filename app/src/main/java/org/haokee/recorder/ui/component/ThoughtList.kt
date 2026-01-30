@@ -75,10 +75,25 @@ fun ThoughtList(
                 }
             }
 
-            // Scroll to the found item
+            // Scroll to the found item with smart animation
             if (found) {
-                // Use instant scroll for better performance (no animation to avoid lag)
-                listState.scrollToItem(index)
+                val firstVisibleIndex = listState.firstVisibleItemIndex
+                val distance = kotlin.math.abs(index - firstVisibleIndex)
+
+                // Smart scroll strategy:
+                // - If close (< 8 items): direct smooth animation
+                // - If far (>= 8 items): jump near target, then animate
+                if (distance < 8) {
+                    // Close distance - smooth animation
+                    listState.animateScrollToItem(index)
+                } else {
+                    // Far distance - jump close then animate for effect
+                    val jumpTarget = maxOf(0, index - 3)
+                    listState.scrollToItem(jumpTarget)
+                    // Small delay for visual stability
+                    kotlinx.coroutines.delay(50)
+                    listState.animateScrollToItem(index)
+                }
             }
 
             // Always clear the scroll request
