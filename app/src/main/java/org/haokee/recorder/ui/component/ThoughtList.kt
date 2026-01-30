@@ -39,6 +39,7 @@ fun ThoughtList(
         scrollToThoughtId?.let { targetId ->
             // Calculate the index position of the target thought
             var index = 0
+            var found = false
 
             // Check in transcribed thoughts
             if (transcribedThoughts.isNotEmpty()) {
@@ -46,39 +47,41 @@ fun ThoughtList(
                 val transcribedIndex = transcribedThoughts.indexOfFirst { it.id == targetId }
                 if (transcribedIndex >= 0) {
                     index += transcribedIndex
-                    listState.animateScrollToItem(index)
-                    onScrollComplete()
-                    return@LaunchedEffect
+                    found = true
+                } else {
+                    index += transcribedThoughts.size
                 }
-                index += transcribedThoughts.size
             }
 
-            // Check in original thoughts
-            if (originalThoughts.isNotEmpty()) {
+            // Check in original thoughts (only if not found yet)
+            if (!found && originalThoughts.isNotEmpty()) {
                 index++ // Section header
                 val originalIndex = originalThoughts.indexOfFirst { it.id == targetId }
                 if (originalIndex >= 0) {
                     index += originalIndex
-                    listState.animateScrollToItem(index)
-                    onScrollComplete()
-                    return@LaunchedEffect
+                    found = true
+                } else {
+                    index += originalThoughts.size
                 }
-                index += originalThoughts.size
             }
 
-            // Check in expired alarm thoughts
-            if (expiredAlarmThoughts.isNotEmpty()) {
+            // Check in expired alarm thoughts (only if not found yet)
+            if (!found && expiredAlarmThoughts.isNotEmpty()) {
                 index++ // Section header
                 val expiredIndex = expiredAlarmThoughts.indexOfFirst { it.id == targetId }
                 if (expiredIndex >= 0) {
                     index += expiredIndex
-                    listState.animateScrollToItem(index)
-                    onScrollComplete()
-                    return@LaunchedEffect
+                    found = true
                 }
             }
 
-            // If not found, still clear the scroll request
+            // Scroll to the found item
+            if (found) {
+                // Use instant scroll for better performance (no animation to avoid lag)
+                listState.scrollToItem(index)
+            }
+
+            // Always clear the scroll request
             onScrollComplete()
         }
     }

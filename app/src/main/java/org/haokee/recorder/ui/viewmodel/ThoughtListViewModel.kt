@@ -136,6 +136,9 @@ class ThoughtListViewModel(
                     )
                     repository.insertThought(thought)
 
+                    // Wait for data to propagate through Flow
+                    delay(150)
+
                     // Auto-select the new thought (single selection) and scroll to it
                     _uiState.update { state ->
                         state.copy(
@@ -281,6 +284,9 @@ class ThoughtListViewModel(
             }
 
             _uiState.update { it.copy(isLoading = false) }
+
+            // Wait for data to propagate through Flow
+            delay(200)
 
             // Auto-select the first converted thought (single selection) and scroll to it
             if (firstThoughtId != null) {
