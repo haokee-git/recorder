@@ -1,11 +1,13 @@
 package org.haokee.recorder.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.haokee.recorder.audio.player.AudioPlayer
+import org.haokee.recorder.audio.recognizer.SpeechToTextHelper
 import org.haokee.recorder.audio.recorder.AudioRecorder
 import org.haokee.recorder.data.model.Thought
 import org.haokee.recorder.data.model.ThoughtColor
@@ -25,6 +27,7 @@ data class ThoughtListUiState(
 )
 
 class ThoughtListViewModel(
+    private val context: Context,
     private val repository: ThoughtRepository,
     val audioRecorder: AudioRecorder,
     val audioPlayer: AudioPlayer
@@ -33,9 +36,22 @@ class ThoughtListViewModel(
     private val _uiState = MutableStateFlow(ThoughtListUiState())
     val uiState: StateFlow<ThoughtListUiState> = _uiState.asStateFlow()
 
+    private val speechToTextHelper = SpeechToTextHelper.getInstance(context)
+
     init {
         loadThoughts()
         startPlaybackProgressUpdater()
+        initializeWhisper()
+    }
+
+    private fun initializeWhisper() {
+        viewModelScope.launch {
+            speechToTextHelper.initialize().onFailure { exception ->
+                // Whisper initialization failed, but app can still work
+                // User will see error message when trying to convert
+                android.util.Log.w("ThoughtListViewModel", "Whisper initialization failed: ${exception.message}")
+            }
+        }
     }
 
     private fun startPlaybackProgressUpdater() {
@@ -228,11 +244,21 @@ class ThoughtListViewModel(
 
             val thoughtsToConvert = allThoughts.filter { it.id in selectedIds && !it.isTranscribed }
 
+            // Show loading state
+            _uiState.update { it.copy(isLoading = true) }
+
             thoughtsToConvert.forEach { thought ->
-                val convertedThought = org.haokee.recorder.audio.recognizer.SpeechToTextHelper.convertThought(thought)
-                repository.updateThought(convertedThought)
+                try {
+                    val convertedThought = speechToTextHelper.convertThought(thought)
+                    repository.updateThought(convertedThought)
+                } catch (e: Exception) {
+                    _uiState.update {
+                        it.copy(error = "转换失败: ${e.message}")
+                    }
+                }
             }
 
+            _uiState.update { it.copy(isLoading = false) }
             clearSelection()
         }
     }
@@ -302,5 +328,6 @@ class ThoughtListViewModel(
         super.onCleared()
         audioRecorder.release()
         audioPlayer.release()
+        speechToTextHelper.release()
     }
 }

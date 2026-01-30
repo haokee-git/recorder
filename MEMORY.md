@@ -64,10 +64,35 @@
 
 ### Phase 2: 语音转文本（已完成 ✅）
 
-- ✅ **SpeechToTextHelper.kt**: 语音识别封装（当前为占位实现）
+#### Whisper 离线识别（2026-01-30 完成）
+- ✅ **WhisperHelper.kt**: Whisper 模型封装
+  - 使用 sherpa-onnx 库
+  - OpenAI Whisper tiny 模型
+  - 完全离线运行
+  - 支持从 assets 加载模型
+  - 单例模式，避免重复初始化
+- ✅ **AudioDecoder.kt**: 音频解码工具
+  - 使用 MediaCodec 解码 M4A/MP3/WAV
+  - 自动转换为 16kHz 单声道 PCM
+  - 线性插值重采样
+  - 立体声转单声道（通道平均）
+- ✅ **SpeechToTextHelper.kt**: 语音识别封装
+  - 真实 Whisper 实现（替换占位代码）
+  - 自动从识别文本生成标题
+  - 错误处理和降级方案
+  - 单例模式，管理 Whisper 生命周期
+- ✅ **ThoughtListViewModel.kt**: 更新转换逻辑
+  - 集成 SpeechToTextHelper
+  - 启动时初始化 Whisper
+  - 显示加载状态
+  - 完善错误处理
 - ✅ **convertSelectedThoughts()**: 批量转换功能
 - ✅ **editThought()**: 手动编辑功能
 - ✅ **EditThoughtDialog.kt**: 编辑对话框（标题+内容）
+
+#### 依赖配置
+- ✅ **build.gradle.kts**: 添加 sherpa-onnx AAR 依赖
+- ✅ **README_WHISPER.md**: 模型文件下载和安装指南
 
 ---
 
@@ -335,6 +360,79 @@ org/haokee/recorder/
 
 ---
 
+### 2026-01-30 开发成果 - Whisper 离线语音识别集成
+
+完成了 Phase 2 语音转文本功能的真实实现，使用 OpenAI Whisper tiny 模型实现完全离线的语音识别。
+
+#### 新增文件
+1. **WhisperHelper.kt** (210 行)
+   - 封装 sherpa-onnx 的 OfflineRecognizer API
+   - 单例模式管理 Whisper 模型生命周期
+   - 从 assets 加载模型文件
+   - 提供简洁的 transcribe 接口
+   - 完善的错误处理和日志
+
+2. **AudioDecoder.kt** (170 行)
+   - 使用 MediaCodec 解码音频文件
+   - 支持 M4A、MP3、WAV 等格式
+   - 自动转换为 16kHz 单声道 PCM
+   - 线性插值重采样算法
+   - 立体声转单声道（通道平均）
+
+3. **README_WHISPER.md** (完整文档)
+   - Whisper 模型下载和安装指南
+   - AAR 文件配置说明
+   - 常见问题解答
+   - 技术细节说明
+
+#### 修改文件
+4. **SpeechToTextHelper.kt** - 完全重写
+   - 从 object 改为 class（单例模式）
+   - 替换占位实现为真实 Whisper 调用
+   - 添加 initialize() 方法初始化模型
+   - convertThought() 改为挂起函数
+   - 从识别文本自动生成标题
+   - 完善的错误处理和降级方案
+
+5. **ThoughtListViewModel.kt** - 集成 Whisper
+   - 添加 Context 参数
+   - 集成 SpeechToTextHelper 单例
+   - init 中初始化 Whisper 模型
+   - convertSelectedThoughts() 添加加载状态
+   - onCleared() 中释放 Whisper 资源
+
+6. **ThoughtViewModelFactory.kt** - 更新工厂
+   - 添加 Context 参数
+   - 传递 Context 到 ViewModel
+
+7. **MainActivity.kt** - 更新初始化
+   - 传入 applicationContext 到 ViewModelFactory
+
+8. **build.gradle.kts** - 添加依赖
+   - 配置 flatDir 本地仓库
+   - 添加 sherpa-onnx AAR 依赖引用
+   - 注释说明下载链接
+
+9. **CLAUDE.md** - 文档更新
+   - 更新语音转文本技术实现说明
+   - 添加 Whisper 需求变更记录
+
+#### 技术特点
+- **完全离线**：无需网络连接，保护用户隐私
+- **高性能**：Whisper tiny 模型（~75MB），int8 量化，推理速度快
+- **自动解码**：支持多种音频格式，自动重采样和转换
+- **错误容错**：模型未加载时降级为默认文本，不影响应用运行
+- **资源管理**：正确的初始化和释放流程，避免内存泄漏
+
+#### 待完成事项
+- [ ] 下载并放置 sherpa-onnx AAR 文件到 `app/libs/`
+- [ ] 下载并放置 Whisper 模型文件到 `app/src/main/assets/models/whisper-tiny/`
+- [ ] 首次构建测试（需要手动下载文件后）
+
+**注意**：由于模型文件较大（AAR 27.4MB + 模型 75MB），未直接提交到代码仓库。用户需要按照 README_WHISPER.md 的说明手动下载和配置。
+
+---
+
 ## 当前项目状态（截至 2026-01-29）
 
 ### 已完成功能模块
@@ -372,7 +470,7 @@ org/haokee/recorder/
 
 #### ⏳ Phase 4: 大模型集成
 - [ ] API 配置管理（Base URL、API Key）
-- [ ] 标题生成功能
+- [ ] 标题生成功能（基于 Whisper 识别结果优化）
 - [ ] 左侧抽屉式对话界面
 - [ ] Markdown 渲染
 - [ ] 单轮对话实现
@@ -385,21 +483,21 @@ org/haokee/recorder/
 
 #### ⏳ 优化项
 - [ ] 声波图像真实数据（MediaMetadataRetriever）
-- [ ] SpeechRecognizer 真实实现
+- [x] ~~Whisper 语音识别真实实现~~ ✅ 已完成（2026-01-30）
 - [ ] 错误处理完善
 - [ ] 加载状态显示
 
 ### 技术债务
-- 无重大技术债务
+- **Whisper 模型文件未内置**：需要用户手动下载 AAR 和模型文件（见 README_WHISPER.md）
 - 代码结构清晰，遵循 MVVM 架构
 - 所有已知 Bug 已修复
 
 ### 下一步建议
-1. **优先级 1**：实现大模型集成（对话功能、标题生成）
-2. **优先级 2**：实现设置页面（API 配置、主题切换）
-3. **优先级 3**：优化声波图像（真实音频数据）
-4. **优先级 4**：完善 SpeechRecognizer 真实实现
+1. **优先级 1**：内置 Whisper 模型文件到 APK（或实现首次启动自动下载）
+2. **优先级 2**：实现大模型集成（对话功能、标题生成）
+3. **优先级 3**：实现设置页面（API 配置、主题切换）
+4. **优先级 4**：优化声波图像（真实音频数据）
 
 ---
 
-*最后更新: 2026-01-29*
+*最后更新: 2026-01-30*

@@ -43,6 +43,12 @@ android {
     }
 }
 
+repositories {
+    flatDir {
+        dirs("libs")
+    }
+}
+
 dependencies {
     // Core library desugaring for Java 8+ APIs on older Android versions
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
@@ -67,6 +73,11 @@ dependencies {
 
     // Permissions
     implementation(libs.accompanist.permissions)
+
+    // Sherpa-ONNX for Whisper speech recognition (local AAR file)
+    // Download from: https://github.com/k2-fsa/sherpa-onnx/releases
+    // Place sherpa-onnx-static-link-onnxruntime-1.12.23.aar in app/libs/
+    implementation(files("libs/sherpa-onnx-static-link-onnxruntime-1.12.23.aar"))
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

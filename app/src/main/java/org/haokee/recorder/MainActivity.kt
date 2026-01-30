@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         val audioPlayer = AudioPlayer()
 
         // Create ViewModel
-        val factory = ThoughtViewModelFactory(repository, audioRecorder, audioPlayer)
+        val factory = ThoughtViewModelFactory(applicationContext, repository, audioRecorder, audioPlayer)
         viewModel = ViewModelProvider(this, factory)[ThoughtListViewModel::class.java]
 
         setContent {

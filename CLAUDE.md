@@ -50,16 +50,19 @@
 ### 二、语音转文本
 
 #### 技术实现
-- **API**：Android 原生 `SpeechRecognizer`
+- **模型**：OpenAI Whisper (tiny) - 本地离线模型
+- **库**：whisper.cpp Android 绑定
+- **模型文件**：内置在 APK 的 assets 目录（~75MB）
 - **触发方式**：
   - 单条：点击感言的"转换"按钮
   - 批量：选中多条后点击工具栏"批量转换"按钮
 - **转换逻辑**：
-  1. 调用 SpeechRecognizer 识别音频
-  2. 获取文本结果
-  3. 默认 `title = content = 识别文本`
-  4. 如果启用大模型 API，调用大模型生成标题
-  5. 保存到数据库，状态变为"已转换"
+  1. 加载 Whisper 模型（首次启动时从 assets 复制到内部存储）
+  2. 调用 Whisper 推理引擎识别音频文件
+  3. 获取识别文本结果
+  4. 默认 `title = content = 识别文本`
+  5. 如果启用大模型 API，调用大模型生成标题
+  6. 保存到数据库，状态变为"已转换"
 
 #### 手动编辑
 - **单选模式**：选中单条感言时，启用"编辑"按钮（蓝色可点击）
@@ -350,3 +353,28 @@
 - 使用 `Vibrator` 或 `HapticFeedback` 提供触觉反馈
 - 使用 `graphicsLayer` 实现字号和透明度渐变
 - 监听滚动状态，自动吸附到最近项
+
+---
+
+### 2026-01-30 - 语音转文本真实实现（Whisper）
+
+#### 需求背景
+将占位实现的语音转文本功能替换为真实的 Whisper (tiny) 模型实现，实现完全离线的语音识别能力。
+
+#### 技术方案
+- **模型选择**：OpenAI Whisper tiny 模型（~75MB）
+- **集成方式**：本地模型，内置在 APK 中（不需要启动后二次下载）
+- **技术库**：whisper.cpp 的 Android 绑定
+- **优势**：
+  - 完全离线运行，符合"随时随地"核心价值
+  - 无 API 调用成本
+  - 响应速度快，隐私性好
+  - 支持多语言识别
+
+#### 实现步骤
+1. 集成 whisper.cpp Android 绑定库
+2. 下载并内置 Whisper tiny 模型文件到 assets 目录
+3. 创建 WhisperHelper.kt 封装推理逻辑
+4. 替换 SpeechToTextHelper.kt 的占位实现
+5. 添加加载状态和错误处理
+6. 更新 ViewModel 调用逻辑
