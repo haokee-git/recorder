@@ -132,14 +132,24 @@ fun ThoughtList(
                     SectionHeader(
                         text = "已转换感言",
                         isCollapsed = transcribedCollapsed,
-                        onToggleCollapse = { transcribedCollapsed = !transcribedCollapsed }
+                        onToggleCollapse = { transcribedCollapsed = !transcribedCollapsed },
+                        modifier = Modifier.animateItemPlacement(
+                            animationSpec = tween(durationMillis = 200)
+                        )
                     )
                 }
-                if (!transcribedCollapsed) {
-                    items(
-                        items = transcribedThoughts,
-                        key = { it.id }
-                    ) { thought ->
+                items(
+                    items = transcribedThoughts,
+                    key = { it.id }
+                ) { thought ->
+                    AnimatedVisibility(
+                        visible = !transcribedCollapsed,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 300)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 200)),
+                        modifier = Modifier.animateItemPlacement(
+                            animationSpec = tween(durationMillis = 200)
+                        )
+                    ) {
                         TranscribedThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -148,10 +158,7 @@ fun ThoughtList(
                             isRecording = isRecording,
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
-                            onPlayClick = { onPlayClick(thought) },
-                            modifier = Modifier.animateItemPlacement(
-                                animationSpec = tween(durationMillis = 300)
-                            )
+                            onPlayClick = { onPlayClick(thought) }
                         )
                     }
                 }
@@ -163,14 +170,24 @@ fun ThoughtList(
                     SectionHeader(
                         text = "原始感言",
                         isCollapsed = originalCollapsed,
-                        onToggleCollapse = { originalCollapsed = !originalCollapsed }
+                        onToggleCollapse = { originalCollapsed = !originalCollapsed },
+                        modifier = Modifier.animateItemPlacement(
+                            animationSpec = tween(durationMillis = 200)
+                        )
                     )
                 }
-                if (!originalCollapsed) {
-                    items(
-                        items = originalThoughts,
-                        key = { it.id }
-                    ) { thought ->
+                items(
+                    items = originalThoughts,
+                    key = { it.id }
+                ) { thought ->
+                    AnimatedVisibility(
+                        visible = !originalCollapsed,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 300)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 200)),
+                        modifier = Modifier.animateItemPlacement(
+                            animationSpec = tween(durationMillis = 200)
+                        )
+                    ) {
                         OriginalThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -179,10 +196,7 @@ fun ThoughtList(
                             isRecording = isRecording,
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
-                            onPlayClick = { onPlayClick(thought) },
-                            modifier = Modifier.animateItemPlacement(
-                                animationSpec = tween(durationMillis = 300)
-                            )
+                            onPlayClick = { onPlayClick(thought) }
                         )
                     }
                 }
@@ -194,14 +208,24 @@ fun ThoughtList(
                     SectionHeader(
                         text = "闹钟已过的感言",
                         isCollapsed = expiredCollapsed,
-                        onToggleCollapse = { expiredCollapsed = !expiredCollapsed }
+                        onToggleCollapse = { expiredCollapsed = !expiredCollapsed },
+                        modifier = Modifier.animateItemPlacement(
+                            animationSpec = tween(durationMillis = 200)
+                        )
                     )
                 }
-                if (!expiredCollapsed) {
-                    items(
-                        items = expiredAlarmThoughts,
-                        key = { it.id }
-                    ) { thought ->
+                items(
+                    items = expiredAlarmThoughts,
+                    key = { it.id }
+                ) { thought ->
+                    AnimatedVisibility(
+                        visible = !expiredCollapsed,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 300)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 200)),
+                        modifier = Modifier.animateItemPlacement(
+                            animationSpec = tween(durationMillis = 200)
+                        )
+                    ) {
                         ExpiredThoughtItem(
                             thought = thought,
                             isSelected = thought.id in selectedThoughts,
@@ -210,10 +234,7 @@ fun ThoughtList(
                             isRecording = isRecording,
                             onClick = { onThoughtClick(thought) },
                             onCheckboxClick = { onCheckboxClick(thought) },
-                            onPlayClick = { onPlayClick(thought) },
-                            modifier = Modifier.animateItemPlacement(
-                                animationSpec = tween(durationMillis = 300)
-                            )
+                            onPlayClick = { onPlayClick(thought) }
                         )
                     }
                 }
@@ -231,10 +252,11 @@ fun ThoughtList(
 private fun SectionHeader(
     text: String,
     isCollapsed: Boolean,
-    onToggleCollapse: () -> Unit
+    onToggleCollapse: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onToggleCollapse)
             .padding(vertical = 8.dp),

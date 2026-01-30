@@ -2,6 +2,8 @@ package org.haokee.recorder.ui.screen
 
 import android.Manifest
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -132,30 +134,10 @@ fun RecorderScreen(
             )
 
             // Selection info bar (always visible)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (uiState.selectedThoughts.isEmpty()) "未选择" else "已选择 ${uiState.selectedThoughts.size} 条感言",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (uiState.selectedThoughts.isNotEmpty()) {
-                    TextButton(
-                        onClick = { viewModel.clearSelection() },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                    ) {
-                        Text("清除选中", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
+            SelectionInfoBar(
+                selectedCount = uiState.selectedThoughts.size,
+                onClearSelection = { viewModel.clearSelection() }
+            )
 
             // Thought list
             ThoughtList(
@@ -358,4 +340,42 @@ fun RecorderScreen(
 @Composable
 private fun BackHandler(enabled: Boolean, onBack: () -> Unit) {
     androidx.activity.compose.BackHandler(enabled = enabled, onBack = onBack)
+}
+
+@Composable
+private fun SelectionInfoBar(
+    selectedCount: Int,
+    onClearSelection: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "已选择 $selectedCount 条感言",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            IconButton(
+                onClick = onClearSelection,
+                enabled = selectedCount > 0
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "清除选中",
+                    tint = if (selectedCount > 0)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                )
+            }
+        }
+    }
 }
