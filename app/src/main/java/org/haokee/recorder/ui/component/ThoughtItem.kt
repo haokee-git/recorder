@@ -418,8 +418,12 @@ private fun AnimatedCheckbox(
         label = "cornerRadius"
     )
 
-    // Inner corner radius should be smaller to match the border
-    val innerCornerRadius = (cornerRadius - 1.dp).coerceAtLeast(0.dp)
+    // Animate border width: 0.dp to 1.dp
+    val borderWidth by animateDpAsState(
+        targetValue = if (isSelected) 1.dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "borderWidth"
+    )
 
     // Animate check progress (0 to 1)
     val checkProgress by animateFloatAsState(
@@ -434,11 +438,13 @@ private fun AnimatedCheckbox(
     Box(
         modifier = modifier
             .size(24.dp)
+            .border(
+                width = borderWidth,
+                color = primaryColor,
+                shape = RoundedCornerShape(cornerRadius)
+            )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(primaryColor)
-            .padding(1.dp)
-            .clip(RoundedCornerShape(innerCornerRadius))
-            .background(Color.White)
+            .background(if (isSelected) primaryColor else Color.White)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -461,7 +467,7 @@ private fun AnimatedCheckbox(
                 ) {
                     drawPath(
                         path = checkPath,
-                        color = primaryColor,
+                        color = Color.White,
                         style = Stroke(
                             width = 2.dp.toPx(),
                             cap = StrokeCap.Round,

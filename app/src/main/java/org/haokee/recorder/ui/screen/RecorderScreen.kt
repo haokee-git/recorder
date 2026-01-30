@@ -84,23 +84,7 @@ fun RecorderScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            RecordButton(
-                isRecording = recordingState.isRecording,
-                onClick = {
-                    if (recordingState.isRecording) {
-                        viewModel.stopRecording()
-                    } else {
-                        if (recordAudioPermissionState.status.isGranted) {
-                            viewModel.startRecording()
-                        } else {
-                            recordAudioPermissionState.launchPermissionRequest()
-                        }
-                    }
-                }
-            )
-        }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -185,6 +169,29 @@ fun RecorderScreen(
                 },
                 modifier = Modifier.weight(1f)
             )
+
+            // Record button at bottom center
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(96.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                RecordButton(
+                    isRecording = recordingState.isRecording,
+                    onClick = {
+                        if (recordingState.isRecording) {
+                            viewModel.stopRecording()
+                        } else {
+                            if (recordAudioPermissionState.status.isGranted) {
+                                viewModel.startRecording()
+                            } else {
+                                recordAudioPermissionState.launchPermissionRequest()
+                            }
+                        }
+                    }
+                )
+            }
         }
     }
 
