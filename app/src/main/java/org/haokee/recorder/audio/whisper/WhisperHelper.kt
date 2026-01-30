@@ -9,33 +9,37 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Whisper Helper - Offline speech recognition using Whisper tiny model
+ * Whisper Helper - Offline speech recognition using Whisper base model
  *
  * This helper class encapsulates the sherpa-onnx library to provide
  * local, offline speech-to-text capabilities using OpenAI's Whisper model.
  *
  * Requirements:
  * 1. AAR file: sherpa-onnx-static-link-onnxruntime-1.12.23.aar in app/libs/
- * 2. Model files in app/src/main/assets/models/whisper-tiny/:
- *    - tiny-encoder.int8.onnx
- *    - tiny-decoder.int8.onnx
- *    - tiny-tokens.txt
+ * 2. Model files in app/src/main/assets/models/whisper-base/:
+ *    - base-encoder.int8.onnx
+ *    - base-decoder.int8.onnx
+ *    - base-tokens.txt
  *
  * Download links:
  * - AAR: https://github.com/k2-fsa/sherpa-onnx/releases/tag/v1.12.23
- * - Models: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2
+ * - Models: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2
  *
- * Note: Using multilingual model to support Chinese and English mixed speech recognition
+ * Model info:
+ * - Size: ~142MB (74M parameters)
+ * - Recognition: Chinese and English mixed speech
+ * - Accuracy: Much better than tiny, good balance between size and performance
  */
 class WhisperHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "WhisperHelper"
-        private const val MODEL_DIR = "models/whisper-tiny"
+        // Using Whisper base model (142MB, good balance)
+        private const val MODEL_DIR = "models/whisper-base"
         // Multilingual model files (supports Chinese and English)
-        private const val ENCODER_FILE = "tiny-encoder.int8.onnx"
-        private const val DECODER_FILE = "tiny-decoder.int8.onnx"
-        private const val TOKENS_FILE = "tiny-tokens.txt"
+        private const val ENCODER_FILE = "base-encoder.int8.onnx"
+        private const val DECODER_FILE = "base-decoder.int8.onnx"
+        private const val TOKENS_FILE = "base-tokens.txt"
 
         @Volatile
         private var instance: WhisperHelper? = null

@@ -15,7 +15,7 @@ import org.haokee.recorder.ui.screen.RecorderScreen
 import org.haokee.recorder.ui.theme.RecorderTheme
 import org.haokee.recorder.ui.viewmodel.ThoughtListViewModel
 import org.haokee.recorder.ui.viewmodel.ThoughtViewModelFactory
-
+                                                                                                                                                    
 class MainActivity : ComponentActivity() {
     private lateinit var viewModel: ThoughtListViewModel
 
