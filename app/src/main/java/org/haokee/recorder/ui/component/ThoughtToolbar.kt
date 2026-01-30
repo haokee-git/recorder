@@ -39,7 +39,8 @@ fun ThoughtToolbar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 ToolbarButton(
                     icon = Icons.Default.Refresh,
@@ -96,14 +97,23 @@ private fun ToolbarButton(
         colors = ButtonDefaults.textButtonColors(
             contentColor = MaterialTheme.colorScheme.primary,
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        )
+        ),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = text,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = text,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
     }
 }
