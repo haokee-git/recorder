@@ -2,6 +2,7 @@ package org.haokee.recorder.ui.screen
 
 import android.Manifest
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
