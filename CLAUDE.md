@@ -459,3 +459,103 @@ Whisper 多语言模型识别结果可能包含繁体中文，用户需要简体
 4. 替换 SpeechToTextHelper.kt 的占位实现
 5. 添加加载状态和错误处理
 6. 更新 ViewModel 调用逻辑
+
+---
+
+### 2026-01-31 - 筛选功能重大改进
+
+#### 需求背景
+优化颜色筛选功能的交互体验，修复筛选窗口位置和动画问题，改进"无色"筛选逻辑。
+
+#### 具体改进
+
+**1. 筛选窗口位置调整**
+- **旧设计**：筛选窗口对齐到整个顶栏，遮挡筛选按钮
+- **新设计**：
+  - 筛选窗口上边框对齐到"已选择感言数"那一行的下边框
+  - 绝对居右对齐（Alignment.TopEnd）
+  - 位置调整为 top: 88.dp（工具栏 + 选择信息栏的高度）
+  - 筛选按钮完全露出，不被遮挡
+
+**2. 筛选窗口动画优化**
+- **旧设计**：整个窗口从顶部滑下（slideInVertically）
+- **新设计**：
+  - 使用 expandVertically / shrinkVertically 动画
+  - 上边框位置固定不动
+  - 下边框向下展开，内容从上到下逐渐显示
+  - 动画时长：200ms（原 300ms）
+
+**3. "无色"筛选逻辑重构**
+- **旧设计**：
+  - "无色"选项等同于"清除所有筛选"
+  - isSelected = selectedColors.isEmpty()
+  - onClick = onClearAll
+- **新设计**：
+  - "无色"是独立的筛选选项（用 null 值表示）
+  - 可以单独选中（只显示无颜色标签的感言）
+  - 可以和其他颜色组合多选（显示无颜色 + 某些颜色的感言）
+  - 默认不选中状态
+  - isSelected = null in selectedColors
+  - onClick = { onColorToggle(null) }
+
+#### 技术实现
+
+**类型系统改进**
+- `ThoughtListUiState.selectedColors` 类型从 `List<ThoughtColor>` 改为 `List<ThoughtColor?>`
+- `ColorFilterDropdown` 参数类型支持 nullable
+- `ThoughtListViewModel.setColorFilter` 参数类型改为 `List<ThoughtColor?>`
+- `filterByColors` 方法支持 null 值筛选
+
+**UI 层改进**
+- RecorderScreen.kt: 修改筛选窗口位置、动画、层级
+- ColorFilterDropdown: 修改 NoColorFilterCircle 的逻辑
+- 背景遮罩层放在筛选窗口下层，确保窗口在最上方
+
+#### 影响文件
+- RecorderScreen.kt: 筛选窗口布局和动画
+- ThoughtListViewModel.kt: selectedColors 类型定义和筛选逻辑
+- ColorFilterDropdown 组件逻辑
+
+---
+
+### 2026-01-31 - UI/UX 细节优化（第二批）
+
+#### 需求背景
+进一步提升用户体验，优化交互细节和视觉反馈。
+
+#### 具体优化
+
+**1. 筛选框展开速度优化**
+- 从 300ms 加快到 200ms
+- 提升响应速度，减少等待感
+
+**2. 全选按钮选择框尺寸调整**
+- **旧设计**：20.dp，与字体不协调
+- **新设计**：16.dp，与"全选"文字大小相对应
+- 圆角半径相应调整（8.dp → 4.dp）
+- 内部勾选标记从 13.dp 缩小到 10.dp
+
+**3. 播放触发逻辑优化**
+- **旧设计**：点击感言卡片任何地方都触发播放
+- **新设计**：只有点击播放按钮才触发播放
+- 点击卡片其他地方不触发任何操作
+- 提升交互准确性，避免误触
+
+**4. 自动定位展开优化**
+- **问题**：录音完成/转换完成后自动定位，如果目标区域被折叠会导致定位失败
+- **解决方案**：
+  - 检测目标感言所在的区域（已转换/原始/已过期）
+  - 如果该区域是折叠状态，先展开（保留展开动画）
+  - 等待 250ms 让动画完成
+  - 然后滚动定位到目标感言
+- **实现位置**：ThoughtList.kt 的 LaunchedEffect(scrollToThoughtId)
+
+#### 影响文件
+- RecorderScreen.kt: 筛选框动画速度、播放触发逻辑
+- ThoughtList.kt: 全选按钮尺寸、自动展开逻辑
+
+#### 技术要点
+- 使用 LaunchedEffect 监听 scrollToThoughtId 变化
+- 通过修改 collapsed 状态触发展开动画
+- kotlinx.coroutines.delay 等待动画完成
+- 确保折叠/展开状态正确同步

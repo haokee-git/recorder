@@ -39,6 +39,7 @@ fun WheelTimePickerDialog(
     onDismiss: () -> Unit,
     onTimeSelected: (LocalDateTime) -> Unit
 ) {
+    val view = LocalView.current
     val currentTime = LocalDateTime.now()
     var selectedYear by remember { mutableIntStateOf(currentTime.year) }
     var selectedMonth by remember { mutableIntStateOf(currentTime.monthValue) }
@@ -178,7 +179,10 @@ fun WheelTimePickerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = onDismiss,
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onDismiss()
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -189,6 +193,7 @@ fun WheelTimePickerDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             val alarmTime = LocalDateTime.of(
                                 selectedYear,
                                 selectedMonth,
@@ -240,6 +245,7 @@ fun DrumRollPicker(
     var isDragging by remember { mutableStateOf(false) }
     var isFling by remember { mutableStateOf(false) }
     var lastNotifiedValue by remember { mutableIntStateOf(-1) }
+    var previousSnapValue by remember { mutableIntStateOf(-1) }
 
     // Convert item units to pixels for rendering
     val scrollOffset by remember { derivedStateOf { scrollIndex.value * itemHeightPx } }
@@ -249,6 +255,7 @@ fun DrumRollPicker(
         if (!isDragging && !isFling) {
             scrollIndex.snapTo(initialScrollIndex)
             lastNotifiedValue = -1
+            previousSnapValue = -1
         }
     }
 
@@ -277,11 +284,26 @@ fun DrumRollPicker(
     LaunchedEffect(isDragging, isFling) {
         if (!isDragging && !isFling) {
             val targetIndex = scrollIndex.value.roundToInt()
+
+            // Calculate the actual value at target index
+            val actualIndex = if (cyclic) {
+                val mod = targetIndex % items.size
+                if (mod < 0) mod + items.size else mod
+            } else {
+                targetIndex.coerceIn(0, items.lastIndex)
+            }
+            val actualValue = items[actualIndex]
+
             scrollIndex.animateTo(
                 targetValue = targetIndex.toFloat(),
                 animationSpec = tween(durationMillis = 200)
             )
-            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+
+            // Only vibrate if the value actually changed
+            if (actualValue != previousSnapValue) {
+                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                previousSnapValue = actualValue
+            }
         }
     }
 

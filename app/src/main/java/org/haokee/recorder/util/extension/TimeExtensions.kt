@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 fun LocalDateTime.toDisplayString(): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.getDefault())
+    val formatter = DateTimeFormatter.ofPattern("yy/MM/dd HH:mm", Locale.getDefault())
     return this.format(formatter)
 }
 

@@ -1,5 +1,6 @@
 package org.haokee.recorder.ui.component
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -8,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,6 +49,7 @@ fun TranscribedThoughtItem(
     onPlayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -69,47 +72,79 @@ fun TranscribedThoughtItem(
                 )
             }
 
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Checkbox on the left
-                AnimatedCheckbox(
-                    isSelected = isSelected,
-                    onClick = onCheckboxClick
-                )
-
-            Column(
-                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = thought.title ?: "无标题",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // First row: Checkbox, Title + Waveform, Play button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Checkbox
+                    AnimatedCheckbox(
+                        isSelected = isSelected,
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onCheckboxClick()
+                        }
+                    )
+
+                    // Title and Waveform
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = thought.title ?: "无标题",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        WaveformView(
+                            audioPath = thought.audioPath,
+                            cachedWaveform = thought.waveformData,
+                            progress = if (isPlaying) playbackProgress else 0f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Play button
+                    IconButton(
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onPlayClick()
+                        },
+                        enabled = !isRecording
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "暂停" else "播放"
+                        )
+                    }
+                }
+
+                // Content text
                 Text(
                     text = thought.content ?: "",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier // 对齐 checkbox 后的内容
                 )
 
-                // Waveform visualization
-                WaveformView(
-                    audioPath = thought.audioPath,
-                    progress = if (isPlaying) playbackProgress else 0f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+                // Time row (right aligned)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 48.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = thought.createdAt.toDisplayString(),
@@ -117,6 +152,7 @@ fun TranscribedThoughtItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     thought.alarmTime?.let {
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "提醒: ${it.toDisplayString()}",
                             fontSize = 12.sp,
@@ -125,22 +161,6 @@ fun TranscribedThoughtItem(
                     }
                 }
             }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onPlayClick,
-                    enabled = !isRecording
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "暂停" else "播放"
-                    )
-                }
-            }
-        }
         }
     }
 }
@@ -157,6 +177,7 @@ fun OriginalThoughtItem(
     onPlayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -179,73 +200,87 @@ fun OriginalThoughtItem(
                 )
             }
 
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Checkbox on the left
-                AnimatedCheckbox(
-                    isSelected = isSelected,
-                    onClick = onCheckboxClick
-                )
-
-            Column(
-                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // First row: Checkbox, Title + Waveform, Play button
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "原始录音",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                    // Checkbox
+                    AnimatedCheckbox(
+                        isSelected = isSelected,
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onCheckboxClick()
+                        }
                     )
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = MaterialTheme.shapes.small
+
+                    // Title and Waveform
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(
-                            text = "未转换",
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "原始录音",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = MaterialTheme.shapes.small,
+                                modifier = Modifier.padding(top = 2.dp) // 略微下移对齐
+                            ) {
+                                Text(
+                                    text = "未转换",
+                                    fontSize = 10.sp, // 减小字号
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                        WaveformView(
+                            audioPath = thought.audioPath,
+                            cachedWaveform = thought.waveformData,
+                            progress = if (isPlaying) playbackProgress else 0f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Play button
+                    IconButton(
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onPlayClick()
+                        },
+                        enabled = !isRecording
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "暂停" else "播放"
                         )
                     }
                 }
 
-                // Waveform visualization
-                WaveformView(
-                    audioPath = thought.audioPath,
-                    progress = if (isPlaying) playbackProgress else 0f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+                // Time (right aligned)
                 Text(
                     text = thought.createdAt.toDisplayString(),
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 48.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End
                 )
             }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onPlayClick,
-                    enabled = !isRecording
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "暂停" else "播放"
-                    )
-                }
-            }
-        }
         }
     }
 }
@@ -262,6 +297,7 @@ fun ExpiredThoughtItem(
     onPlayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -284,50 +320,82 @@ fun ExpiredThoughtItem(
                 )
             }
 
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Checkbox on the left
-                AnimatedCheckbox(
-                    isSelected = isSelected,
-                    onClick = onCheckboxClick
-                )
-
-            Column(
-                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = if (thought.isTranscribed) thought.title ?: "无标题" else "原始录音",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // First row: Checkbox, Title + Waveform, Play button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Checkbox
+                    AnimatedCheckbox(
+                        isSelected = isSelected,
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onCheckboxClick()
+                        }
+                    )
+
+                    // Title and Waveform
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (thought.isTranscribed) thought.title ?: "无标题" else "原始录音",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        WaveformView(
+                            audioPath = thought.audioPath,
+                            cachedWaveform = thought.waveformData,
+                            progress = if (isPlaying) playbackProgress else 0f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Play button
+                    IconButton(
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onPlayClick()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "暂停" else "播放",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Content text (if transcribed)
                 if (thought.isTranscribed && thought.content != null) {
                     Text(
                         text = thought.content,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
                     )
                 }
 
-                // Waveform visualization
-                WaveformView(
-                    audioPath = thought.audioPath,
-                    progress = if (isPlaying) playbackProgress else 0f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+                // Time row (right aligned)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 48.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = thought.createdAt.toDisplayString(),
@@ -335,6 +403,7 @@ fun ExpiredThoughtItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     thought.alarmTime?.let {
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "已过期: ${it.toDisplayString()}",
                             fontSize = 12.sp,
@@ -343,20 +412,6 @@ fun ExpiredThoughtItem(
                     }
                 }
             }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onPlayClick) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "暂停" else "播放",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
         }
     }
 }

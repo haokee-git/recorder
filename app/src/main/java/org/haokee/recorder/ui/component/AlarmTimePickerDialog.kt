@@ -1,9 +1,11 @@
 package org.haokee.recorder.ui.component
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import java.time.LocalDateTime
 
@@ -13,6 +15,7 @@ fun AlarmTimePickerDialog(
     onDismiss: () -> Unit,
     onTimeSelected: (LocalDateTime) -> Unit
 ) {
+    val view = LocalView.current
     val currentTime = LocalDateTime.now()
     var selectedDate by remember { mutableStateOf(currentTime.toLocalDate()) }
     var selectedHour by remember { mutableStateOf(currentTime.hour) }
@@ -79,6 +82,7 @@ fun AlarmTimePickerDialog(
         confirmButton = {
             TextButton(
                 onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     val alarmTime = LocalDateTime.of(
                         selectedDate,
                         java.time.LocalTime.of(selectedHour, selectedMinute)
@@ -91,7 +95,12 @@ fun AlarmTimePickerDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    onDismiss()
+                }
+            ) {
                 Text("取消")
             }
         }

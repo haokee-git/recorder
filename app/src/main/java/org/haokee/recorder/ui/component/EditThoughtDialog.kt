@@ -1,9 +1,11 @@
 package org.haokee.recorder.ui.component
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import org.haokee.recorder.data.model.Thought
 
@@ -14,6 +16,7 @@ fun EditThoughtDialog(
     onDismiss: () -> Unit,
     onSave: (String, String) -> Unit
 ) {
+    val view = LocalView.current
     var title by remember { mutableStateOf(thought.title ?: "") }
     var content by remember { mutableStateOf(thought.content ?: "") }
 
@@ -49,6 +52,7 @@ fun EditThoughtDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     onSave(title, content)
                     onDismiss()
                 },
@@ -63,7 +67,10 @@ fun EditThoughtDialog(
         },
         dismissButton = {
             Button(
-                onClick = onDismiss,
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    onDismiss()
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary

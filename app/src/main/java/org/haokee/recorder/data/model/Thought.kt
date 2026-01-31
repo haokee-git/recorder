@@ -15,5 +15,6 @@ data class Thought(
     val alarmTime: LocalDateTime? = null,
     val createdAt: LocalDateTime,
     val transcribedAt: LocalDateTime? = null,
-    val isTranscribed: Boolean = false
+    val isTranscribed: Boolean = false,
+    val waveformData: String? = null // JSON 数组存储波形数据
 )

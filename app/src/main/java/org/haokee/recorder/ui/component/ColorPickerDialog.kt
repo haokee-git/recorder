@@ -1,5 +1,6 @@
 package org.haokee.recorder.ui.component
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -31,6 +33,7 @@ fun ColorPickerDialog(
     onDismiss: () -> Unit,
     onColorSelected: (ThoughtColor?) -> Unit
 ) {
+    val view = LocalView.current
     var selectedColor by remember { mutableStateOf(currentColor) }
 
     AlertDialog(
@@ -85,6 +88,7 @@ fun ColorPickerDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     onColorSelected(selectedColor)
                     onDismiss()
                 },
@@ -98,7 +102,10 @@ fun ColorPickerDialog(
         },
         dismissButton = {
             Button(
-                onClick = onDismiss,
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    onDismiss()
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -116,6 +123,8 @@ private fun PickerColorCircle(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val view = LocalView.current
+
     // Animate corner radius: circle (28.dp) to rounded rect (8.dp)
     val cornerRadius by animateDpAsState(
         targetValue = if (isSelected) 8.dp else 28.dp,
@@ -150,7 +159,10 @@ private fun PickerColorCircle(
             .padding(1.dp)
             .clip(RoundedCornerShape(innerCornerRadius))
             .background(color.color)
-            .clickable(onClick = onClick),
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         // Animated check mark from left to right
@@ -190,6 +202,8 @@ private fun NoColorCircle(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val view = LocalView.current
+
     // Animate corner radius: circle (28.dp) to rounded rect (8.dp)
     val cornerRadius by animateDpAsState(
         targetValue = if (isSelected) 8.dp else 28.dp,
@@ -208,7 +222,10 @@ private fun NoColorCircle(
             .padding(1.dp)
             .clip(RoundedCornerShape(innerCornerRadius))
             .background(Color.White)
-            .clickable(onClick = onClick),
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         // Draw diagonal slash that extends from corner to corner

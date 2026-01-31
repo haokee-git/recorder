@@ -1,5 +1,6 @@
 package org.haokee.recorder.ui.component
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
@@ -28,6 +30,8 @@ fun ThoughtToolbar(
     onFilterClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -43,35 +47,45 @@ fun ThoughtToolbar(
                     icon = Icons.Default.Refresh,
                     text = "转换",
                     enabled = hasSelection && !isAllTranscribed,
-                    onClick = onBatchConvertClick
+                    onClick = onBatchConvertClick,
+                    view = view
                 )
                 ToolbarButton(
                     icon = Icons.Default.Edit,
                     text = "编辑",
                     enabled = isSingleSelection,
-                    onClick = onEditClick
+                    onClick = onEditClick,
+                    view = view
                 )
                 ToolbarButton(
                     icon = Icons.Default.Notifications,
                     text = "提醒",
                     enabled = hasSelection,
-                    onClick = onSetAlarmClick
+                    onClick = onSetAlarmClick,
+                    view = view
                 )
                 ToolbarButton(
                     icon = Icons.Default.Circle,
                     text = "颜色",
                     enabled = hasSelection,
-                    onClick = onSetColorClick
+                    onClick = onSetColorClick,
+                    view = view
                 )
                 ToolbarButton(
                     icon = Icons.Default.Delete,
                     text = "删除",
                     enabled = hasSelection,
-                    onClick = onDeleteClick
+                    onClick = onDeleteClick,
+                    view = view
                 )
             }
 
-            IconButton(onClick = onFilterClick) {
+            IconButton(
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    onFilterClick()
+                }
+            ) {
                 Icon(
                     imageVector = Icons.Default.FilterList,
                     contentDescription = "筛选",
@@ -86,10 +100,14 @@ private fun ToolbarButton(
     icon: ImageVector,
     text: String,
     enabled: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    view: android.view.View
 ) {
     TextButton(
-        onClick = onClick,
+        onClick = {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            onClick()
+        },
         enabled = enabled,
         colors = ButtonDefaults.textButtonColors(
             contentColor = MaterialTheme.colorScheme.primary,

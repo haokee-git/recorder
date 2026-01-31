@@ -1,9 +1,12 @@
 package org.haokee.recorder.ui.screen
 
 import android.Manifest
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,8 +23,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.drawLine
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -36,6 +39,7 @@ fun RecorderScreen(
     viewModel: ThoughtListViewModel,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val recordingState by viewModel.audioRecorder.recordingState.collectAsState()
@@ -98,6 +102,14 @@ fun RecorderScreen(
                     // TODO: Phase 4 - Open settings screen
                 }
             )
+        },
+        bottomBar = {
+            // Loading indicator at bottom
+            if (uiState.isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
@@ -173,14 +185,7 @@ fun RecorderScreen(
                 isRecording = recordingState.isRecording,
                 scrollToThoughtId = uiState.scrollToThoughtId,
                 onThoughtClick = { thought ->
-                    // Click on card - play audio
-                    if (playbackState.currentThoughtId == thought.id && playbackState.isPlaying) {
-                        viewModel.pausePlayback()
-                    } else if (playbackState.currentThoughtId == thought.id && !playbackState.isPlaying) {
-                        viewModel.resumePlayback()
-                    } else {
-                        viewModel.playThought(thought)
-                    }
+                    // Click on card - do nothing (only play button triggers playback)
                 },
                 onCheckboxClick = { thought ->
                     // Click on checkbox - toggle selection
@@ -207,6 +212,57 @@ fun RecorderScreen(
                 },
                 modifier = Modifier.weight(1f)
             )
+        }
+
+        // Dismiss background when filter is shown (behind the dropdown)
+        if (showColorFilter) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        onClick = { showColorFilter = false },
+                        indication = null,
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    )
+            )
+        }
+
+        // Color filter dropdown (on top of everything)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopEnd)
+        ) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showColorFilter,
+                enter = expandVertically(
+                    animationSpec = tween(durationMillis = 200),
+                    expandFrom = Alignment.Top
+                ),
+                exit = shrinkVertically(
+                    animationSpec = tween(durationMillis = 200),
+                    shrinkTowards = Alignment.Top
+                ),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 88.dp, end = 16.dp)
+            ) {
+                ColorFilterDropdown(
+                    selectedColors = uiState.selectedColors,
+                    onColorToggle = { color ->
+                        val currentColors = uiState.selectedColors.toMutableSet()
+                        if (color in currentColors) {
+                            currentColors.remove(color)
+                        } else {
+                            currentColors.add(color)
+                        }
+                        viewModel.setColorFilter(currentColors.toList())
+                    },
+                    onClearAll = {
+                        viewModel.setColorFilter(emptyList())
+                    }
+                )
+            }
         }
 
         // Floating record button at bottom center
@@ -272,48 +328,6 @@ fun RecorderScreen(
         )
     }
 
-    // Color filter dropdown (no dialog, just show/hide)
-    androidx.compose.animation.AnimatedVisibility(
-        visible = showColorFilter,
-        enter = androidx.compose.animation.slideInVertically(
-            animationSpec = tween(durationMillis = 300),
-            initialOffsetY = { -it }
-        ),
-        exit = androidx.compose.animation.slideOutVertically(
-            animationSpec = tween(durationMillis = 300),
-            targetOffsetY = { -it }
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    onClick = { showColorFilter = false },
-                    indication = null,
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                )
-        ) {
-            ColorFilterDropdown(
-                selectedColors = uiState.selectedColors,
-                onColorToggle = { color ->
-                    val currentColors = uiState.selectedColors.toMutableSet()
-                    if (color in currentColors) {
-                        currentColors.remove(color)
-                    } else {
-                        currentColors.add(color)
-                    }
-                    viewModel.setColorFilter(currentColors.toList())
-                },
-                onClearAll = {
-                    viewModel.setColorFilter(emptyList())
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 56.dp, end = 16.dp)
-            )
-        }
-    }
-
     // Alarm time picker dialog
     if (showAlarmPicker) {
         WheelTimePickerDialog(
@@ -352,12 +366,22 @@ fun RecorderScreen(
             title = { Text("需要录音权限") },
             text = { Text("此应用需要录音权限来录制您的感言。") },
             confirmButton = {
-                TextButton(onClick = { recordAudioPermissionState.launchPermissionRequest() }) {
+                TextButton(
+                    onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        recordAudioPermissionState.launchPermissionRequest()
+                    }
+                ) {
                     Text("授予权限")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { /* Do nothing */ }) {
+                TextButton(
+                    onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        /* Do nothing */
+                    }
+                ) {
                     Text("取消")
                 }
             }
@@ -373,12 +397,22 @@ fun RecorderScreen(
                     title = { Text("需要通知权限") },
                     text = { Text("此应用需要通知权限来在闹钟时间到达时提醒您。") },
                     confirmButton = {
-                        TextButton(onClick = { permissionState.launchPermissionRequest() }) {
+                        TextButton(
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                permissionState.launchPermissionRequest()
+                            }
+                        ) {
                             Text("授予权限")
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { /* Do nothing */ }) {
+                        TextButton(
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                /* Do nothing */
+                            }
+                        ) {
                             Text("取消")
                         }
                     }
@@ -437,8 +471,8 @@ private fun SelectionInfoBar(
 
 @Composable
 private fun ColorFilterDropdown(
-    selectedColors: List<org.haokee.recorder.data.model.ThoughtColor>,
-    onColorToggle: (org.haokee.recorder.data.model.ThoughtColor) -> Unit,
+    selectedColors: List<org.haokee.recorder.data.model.ThoughtColor?>,
+    onColorToggle: (org.haokee.recorder.data.model.ThoughtColor?) -> Unit,
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -484,8 +518,8 @@ private fun ColorFilterDropdown(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 NoColorFilterCircle(
-                    isSelected = selectedColors.isEmpty(),
-                    onClick = onClearAll
+                    isSelected = null in selectedColors,
+                    onClick = { onColorToggle(null) }
                 )
                 TextButton(
                     onClick = onClearAll,

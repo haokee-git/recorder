@@ -3,9 +3,11 @@ package org.haokee.recorder.ui.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.haokee.recorder.audio.player.AudioPlayer
 import org.haokee.recorder.audio.recognizer.SpeechToTextHelper
 import org.haokee.recorder.audio.recorder.AudioRecorder
@@ -21,7 +23,7 @@ data class ThoughtListUiState(
     val expiredAlarmThoughts: List<Thought> = emptyList(),
     val selectedThoughts: Set<String> = emptySet(),
     val isMultiSelectMode: Boolean = false,
-    val selectedColors: List<ThoughtColor> = emptyList(),
+    val selectedColors: List<ThoughtColor?> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val scrollToThoughtId: String? = null
@@ -103,7 +105,9 @@ class ThoughtListViewModel(
     private fun filterByColors(thoughts: List<Thought>): List<Thought> {
         val selectedColors = _uiState.value.selectedColors
         if (selectedColors.isEmpty()) return thoughts
-        return thoughts.filter { it.color in selectedColors }
+        return thoughts.filter { thought ->
+            thought.color in selectedColors
+        }
     }
 
     fun startRecording() {
@@ -126,13 +130,29 @@ class ThoughtListViewModel(
 
     fun stopRecording() {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+
             audioRecorder.stopRecording().onSuccess { file ->
                 file?.let {
+                    // Extract waveform in background
+                    val waveformData = withContext(Dispatchers.IO) {
+                        try {
+                            val waveform = org.haokee.recorder.audio.waveform.WaveformExtractor
+                                .extractWaveform(it.absolutePath, 120)
+                            // Serialize to JSON
+                            waveform.joinToString(",")
+                        } catch (e: Exception) {
+                            android.util.Log.e("ThoughtListViewModel", "Failed to extract waveform", e)
+                            null
+                        }
+                    }
+
                     val thought = Thought(
                         id = UUID.randomUUID().toString(),
                         audioPath = it.name,
                         createdAt = LocalDateTime.now(),
-                        isTranscribed = false
+                        isTranscribed = false,
+                        waveformData = waveformData
                     )
                     repository.insertThought(thought)
 
@@ -144,13 +164,17 @@ class ThoughtListViewModel(
                         state.copy(
                             selectedThoughts = setOf(thought.id),
                             isMultiSelectMode = true,
-                            scrollToThoughtId = thought.id
+                            scrollToThoughtId = thought.id,
+                            isLoading = false
                         )
                     }
                 }
             }.onFailure { exception ->
                 _uiState.update {
-                    it.copy(error = "Failed to save recording: ${exception.message}")
+                    it.copy(
+                        error = "Failed to save recording: ${exception.message}",
+                        isLoading = false
+                    )
                 }
             }
         }
@@ -241,7 +265,7 @@ class ThoughtListViewModel(
         loadThoughts()
     }
 
-    fun setColorFilter(colors: List<ThoughtColor>) {
+    fun setColorFilter(colors: List<ThoughtColor?>) {
         _uiState.update { it.copy(selectedColors = colors) }
         loadThoughts()
     }

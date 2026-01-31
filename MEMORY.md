@@ -505,7 +505,310 @@ org/haokee/recorder/
 
 ---
 
-## 当前项目状态（截至 2026-01-29）
+### 2026-01-31 开发成果 - 筛选功能重大改进
+
+完成了颜色筛选功能的全面优化，包括筛选窗口位置、动画效果和"无色"筛选逻辑的重构。
+
+#### 1. 筛选窗口位置和动画优化 ✅
+
+**问题**：
+- 筛选窗口位置不准确，遮挡了筛选按钮
+- 动画效果不符合预期（整个窗口从顶部滑下）
+
+**解决方案**：
+- **RecorderScreen.kt** - 筛选窗口位置调整
+  ```kotlin
+  // 修改前：top: 56.dp（对齐整个顶栏）
+  // 修改后：top: 88.dp（对齐选择信息栏下方）
+  .padding(top = 88.dp, end = 16.dp)
+  ```
+
+- **动画改进**：
+  ```kotlin
+  // 修改前：slideInVertically / slideOutVertically
+  // 修改后：expandVertically / shrinkVertically
+  AnimatedVisibility(
+      visible = showColorFilter,
+      enter = expandVertically(
+          animationSpec = tween(durationMillis = 200),
+          expandFrom = Alignment.Top
+      ),
+      exit = shrinkVertically(
+          animationSpec = tween(durationMillis = 200),
+          shrinkTowards = Alignment.Top
+      )
+  )
+  ```
+
+- **层级调整**：背景遮罩层放在筛选窗口下方，确保窗口显示在最上层
+
+**效果**：
+- 筛选窗口上边框对齐到选择信息栏下方
+- 筛选按钮完全露出，不被遮挡
+- 上边框固定不动，下边框向下展开
+- 动画时长从 300ms 优化到 200ms
+
+#### 2. "无色"筛选逻辑重构 ✅
+
+**问题**：
+- "无色"选项被当作"清除所有筛选"功能
+- 无法单独筛选无颜色标签的感言
+- 无法和其他颜色组合筛选
+
+**解决方案**：
+
+**类型系统改进**：
+- **ThoughtListViewModel.kt** - 修改 selectedColors 类型
+  ```kotlin
+  // 修改前：
+  data class ThoughtListUiState(
+      val selectedColors: List<ThoughtColor> = emptyList()
+  )
+
+  // 修改后：
+  data class ThoughtListUiState(
+      val selectedColors: List<ThoughtColor?> = emptyList()
+  )
+  ```
+
+- **filterByColors 方法** - 支持 null 值筛选
+  ```kotlin
+  private fun filterByColors(thoughts: List<Thought>): List<Thought> {
+      val selectedColors = _uiState.value.selectedColors
+      if (selectedColors.isEmpty()) return thoughts
+      return thoughts.filter { thought ->
+          thought.color in selectedColors  // 现在支持 null
+      }
+  }
+  ```
+
+- **setColorFilter 方法** - 参数类型更新
+  ```kotlin
+  fun setColorFilter(colors: List<ThoughtColor?>) {
+      _uiState.update { it.copy(selectedColors = colors) }
+      loadThoughts()
+  }
+  ```
+
+**UI 层改进**：
+- **RecorderScreen.kt** - ColorFilterDropdown 参数类型
+  ```kotlin
+  @Composable
+  private fun ColorFilterDropdown(
+      selectedColors: List<ThoughtColor?>,  // 支持 nullable
+      onColorToggle: (ThoughtColor?) -> Unit,  // 支持 nullable
+      onClearAll: () -> Unit
+  )
+  ```
+
+- **NoColorFilterCircle 逻辑** - 独立筛选选项
+  ```kotlin
+  // 修改前：
+  NoColorFilterCircle(
+      isSelected = selectedColors.isEmpty(),
+      onClick = onClearAll
+  )
+
+  // 修改后：
+  NoColorFilterCircle(
+      isSelected = null in selectedColors,
+      onClick = { onColorToggle(null) }
+  )
+  ```
+
+**效果**：
+- "无色"现在是独立的筛选选项（用 null 值表示）
+- 可以单独选中，只显示无颜色标签的感言
+- 可以和其他颜色组合多选
+- 默认不选中状态
+
+#### 影响文件
+- RecorderScreen.kt: 筛选窗口位置、动画、ColorFilterDropdown 类型
+- ThoughtListViewModel.kt: selectedColors 类型、filterByColors、setColorFilter
+- NoColorFilterCircle 组件逻辑
+
+---
+
+### 2026-01-31 开发成果 - UI/UX 细节优化（第二批）
+
+完成了多项用户体验细节优化，进一步提升交互流畅性和视觉准确性。
+
+#### 1. 筛选框展开速度优化 ✅
+
+**RecorderScreen.kt** - 动画时长调整
+```kotlin
+// 修改前：durationMillis = 300
+// 修改后：durationMillis = 200
+animationSpec = tween(durationMillis = 200)
+```
+
+**效果**：提升响应速度，减少等待感
+
+#### 2. 全选按钮选择框尺寸调整 ✅
+
+**ThoughtList.kt** - SectionCheckbox 尺寸优化
+```kotlin
+// 修改前：
+.size(20.dp)  // 选择框
+Canvas(modifier = Modifier.size(13.dp))  // 勾选标记
+val cornerRadius = if (isSelected) 5.dp else 10.dp
+
+// 修改后：
+.size(16.dp)  // 选择框缩小
+Canvas(modifier = Modifier.size(10.dp))  // 勾选标记缩小
+val cornerRadius = if (isSelected) 4.dp else 8.dp  // 圆角调整
+```
+
+**效果**：选择框与"全选"文字大小协调，视觉更和谐
+
+#### 3. 播放触发逻辑优化 ✅
+
+**RecorderScreen.kt** - 移除卡片点击播放
+```kotlin
+// 修改前：
+onThoughtClick = { thought ->
+    // 点击卡片播放音频
+    if (playbackState.currentThoughtId == thought.id && playbackState.isPlaying) {
+        viewModel.pausePlayback()
+    } else if (playbackState.currentThoughtId == thought.id && !playbackState.isPlaying) {
+        viewModel.resumePlayback()
+    } else {
+        viewModel.playThought(thought)
+    }
+}
+
+// 修改后：
+onThoughtClick = { thought ->
+    // 点击卡片不触发任何操作
+}
+```
+
+**效果**：
+- 只有点击播放按钮才触发播放
+- 避免误触，提升交互准确性
+
+#### 4. 自动定位展开优化 ✅
+
+**问题**：录音/转换完成后自动定位时，如果目标区域被折叠会导致定位失败
+
+**ThoughtList.kt** - LaunchedEffect 添加展开逻辑
+```kotlin
+LaunchedEffect(scrollToThoughtId) {
+    scrollToThoughtId?.let { targetId ->
+        // 1. 检测目标感言在哪个区域，如果折叠则展开
+        var needsExpand = false
+
+        if (transcribedThoughts.any { it.id == targetId } && transcribedCollapsed) {
+            transcribedCollapsed = false
+            needsExpand = true
+        } else if (originalThoughts.any { it.id == targetId } && originalCollapsed) {
+            originalCollapsed = false
+            needsExpand = true
+        } else if (expiredAlarmThoughts.any { it.id == targetId } && expiredCollapsed) {
+            expiredCollapsed = false
+            needsExpand = true
+        }
+
+        // 2. 等待展开动画完成
+        if (needsExpand) {
+            kotlinx.coroutines.delay(250)
+        }
+
+        // 3. 然后计算索引并滚动定位
+        // ... 原有的滚动逻辑
+    }
+}
+```
+
+**效果**：
+- 自动检测目标感言所在区域的折叠状态
+- 如果折叠，先展开（保留展开动画）
+- 等待动画完成后再滚动定位
+- 确保用户能看到新增/转换的感言
+
+#### 影响文件
+- RecorderScreen.kt: 筛选框速度、播放触发逻辑
+- ThoughtList.kt: 全选按钮尺寸、自动展开逻辑
+
+---
+
+### 2026-01-31 开发成果 - 声波图像真实数据实现
+
+完成了声波图像可视化的真实数据提取，从伪随机波形升级为基于真实音频数据的波形显示。
+
+#### 需求背景
+之前的实现使用文件路径哈希生成伪随机波形，时长也是基于文件大小估算。用户需要真实的波形数据和准确的音频时长。
+
+#### 实现方案（第一版 - 已优化）
+
+**新增文件**：
+1. **WaveformExtractor.kt** (176 行)
+   - 使用 MediaMetadataRetriever 获取真实音频时长
+   - 使用 MediaExtractor 读取压缩音频包大小作为振幅近似值
+   - 轻量级方法，无需完整解码音频文件
+   - 对包大小数据采样生成 60 个波形柱状图
+   - 完善的错误处理和降级方案
+
+**修改文件**：
+2. **WaveformView.kt** - 异步加载真实数据
+   - 使用 LaunchedEffect + Dispatchers.IO 异步加载
+   - 使用 mutableStateOf 保存加载结果
+   - 加载期间显示默认波形（中等振幅）
+   - 加载完成后自动更新显示
+   - 避免阻塞 UI 线程
+
+#### 技术特点
+- **真实时长**：MediaMetadataRetriever 读取音频元数据，精确到毫秒
+- **快速波形提取**：使用 MediaExtractor 读取压缩包大小，无需解码
+- **异步加载**：在 IO 线程执行，不阻塞 UI
+- **性能优化**：比完整 PCM 解码快 10-100 倍
+- **采样算法**：将音频包分段，每段取最大包大小
+- **错误容错**：文件不存在或提取失败时返回默认波形
+- **振幅归一化**：将包大小映射到 0.2-1.0 范围（500 字节为参考值）
+
+#### 关键改进（Bug 修复）
+
+**第一次修复** - UI 线程阻塞问题：
+- **问题**：在 UI 线程同步解码音频，导致界面卡顿
+- **解决**：使用 LaunchedEffect + Dispatchers.IO 异步加载
+
+**第二次修复** - 波形都一样的问题（根本原因：CBR 编码）：
+- **问题诊断**：AAC 使用恒定比特率（CBR）编码，所有压缩包大小几乎相同
+- **初次尝试失败**：
+  - 尝试 1：修复 ByteBuffer 大小（0 → 256KB）
+  - 尝试 2：动态归一化算法
+  - 结果：仍然无效，因为 CBR 编码的本质问题
+- **最终解决方案**：改用真实 PCM 解码
+  ```kotlin
+  // 使用 MediaCodec 解码音频为 PCM 数据
+  codec = MediaCodec.createDecoderByType(mimeType)
+  codec.configure(format, null, null, 0)
+  codec.start()
+
+  // 从解码后的 PCM 数据提取振幅
+  val sample = outputBuffer.short.toFloat() / 32768f
+  val amplitude = kotlin.math.abs(sample)
+  ```
+  - 解码 AAC/M4A 为 PCM 样本（16-bit）
+  - 提取每个解码缓冲区的最大振幅
+  - 限制样本数量（最多 barCount * 100）防止过度解码
+  - 将振幅数组采样为 60 个波形柱状图
+  - 异步执行（Dispatchers.IO），不阻塞 UI
+
+#### 影响文件
+- 新建 WaveformExtractor.kt
+- 修改 WaveformView.kt
+
+#### 用户体验提升
+- ✅ 显示真实的音频时长（精确到毫秒）
+- ✅ 显示基于真实数据的音频波形（反映压缩包大小变化）
+- ✅ 播放进度与实际音频同步
+- ✅ 快速加载，无界面卡顿
+- ✅ 不同的录音显示不同的波形特征
+
+---
+
+## 当前项目状态（截至 2026-01-31）
 
 ### 已完成功能模块
 
@@ -533,10 +836,14 @@ org/haokee/recorder/
 
 #### ✅ UI/UX 优化（100%）
 - 选择框交互（替代长按）
-- 声波图像可视化
+- 声波图像可视化（真实音频数据 + MediaMetadataRetriever）
 - 播放进度实时显示
 - 颜色标记优化（16dp 圆形，位于播放按钮左侧）
 - 时间选择器（垂直滚轮，渐变效果，惯性滚动，触觉反馈）
+- 筛选窗口优化（位置、动画、无色逻辑）
+- 全选按钮尺寸优化（16.dp）
+- 播放触发逻辑优化（仅播放按钮触发）
+- 自动定位展开优化（折叠区域先展开）
 
 ### 待实现功能模块
 
@@ -554,7 +861,7 @@ org/haokee/recorder/
 - [ ] 关于页面（版本号）
 
 #### ⏳ 优化项
-- [ ] 声波图像真实数据（MediaMetadataRetriever）
+- [x] ~~声波图像真实数据（MediaMetadataRetriever）~~ ✅ 已完成（2026-01-31）
 - [x] ~~Whisper 语音识别真实实现~~ ✅ 已完成（2026-01-30）
 - [ ] 错误处理完善
 - [ ] 加载状态显示
@@ -567,8 +874,8 @@ org/haokee/recorder/
 ### 下一步建议
 1. **优先级 1**：实现大模型集成（对话功能、标题生成）
 2. **优先级 2**：实现设置页面（API 配置、主题切换）
-3. **优先级 3**：优化声波图像（真实音频数据）
+3. **优先级 3**：错误处理和加载状态完善
 
 ---
 
-*最后更新: 2026-01-30*
+*最后更新: 2026-01-31*

@@ -35,7 +35,9 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import android.view.HapticFeedbackConstants
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.haokee.recorder.data.model.Thought
@@ -69,6 +71,26 @@ fun ThoughtList(
     // Handle auto-scroll to newly created/converted thought
     LaunchedEffect(scrollToThoughtId) {
         scrollToThoughtId?.let { targetId ->
+            // First, expand the section if it's collapsed
+            var needsExpand = false
+
+            // Check which section the target is in and expand if needed
+            if (transcribedThoughts.any { it.id == targetId } && transcribedCollapsed) {
+                transcribedCollapsed = false
+                needsExpand = true
+            } else if (originalThoughts.any { it.id == targetId } && originalCollapsed) {
+                originalCollapsed = false
+                needsExpand = true
+            } else if (expiredAlarmThoughts.any { it.id == targetId } && expiredCollapsed) {
+                expiredCollapsed = false
+                needsExpand = true
+            }
+
+            // Wait for expand animation to complete
+            if (needsExpand) {
+                kotlinx.coroutines.delay(250)
+            }
+
             // Calculate the index position of the target thought
             var index = 0
             var found = false
@@ -277,6 +299,8 @@ private fun SectionHeader(
     onSelectAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -289,7 +313,10 @@ private fun SectionHeader(
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable(onClick = onToggleCollapse)
+            modifier = Modifier.clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onToggleCollapse()
+            }
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -298,7 +325,10 @@ private fun SectionHeader(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.clickable(onClick = onSelectAll)
+                modifier = Modifier.clickable {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    onSelectAll()
+                }
             ) {
                 SectionCheckbox(isSelected = isAllSelected)
                 Text(
@@ -308,7 +338,10 @@ private fun SectionHeader(
                 )
             }
             IconButton(
-                onClick = onToggleCollapse,
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    onToggleCollapse()
+                },
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
@@ -327,9 +360,9 @@ private fun SectionCheckbox(
     isSelected: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // Animate corner radius: circle (10.dp) to rounded rect (5.dp)
+    // Animate corner radius: circle (8.dp) to rounded rect (4.dp)
     val cornerRadius by animateDpAsState(
-        targetValue = if (isSelected) 5.dp else 10.dp,
+        targetValue = if (isSelected) 4.dp else 8.dp,
         animationSpec = tween(durationMillis = 200),
         label = "cornerRadius"
     )
@@ -352,7 +385,7 @@ private fun SectionCheckbox(
 
     Box(
         modifier = modifier
-            .size(20.dp)
+            .size(16.dp)
             .border(
                 width = borderWidth,
                 color = borderColor,
@@ -363,7 +396,7 @@ private fun SectionCheckbox(
         contentAlignment = Alignment.Center
     ) {
         // Animated check mark from left to right
-        Canvas(modifier = Modifier.size(13.dp)) {
+        Canvas(modifier = Modifier.size(10.dp)) {
             if (checkProgress > 0f) {
                 val checkPath = Path().apply {
                     // Check mark path

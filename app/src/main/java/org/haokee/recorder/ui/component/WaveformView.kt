@@ -4,34 +4,80 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.haokee.recorder.audio.waveform.WaveformExtractor
 import java.io.File
-import kotlin.math.abs
-import kotlin.math.sin
-import kotlin.random.Random
 
 @Composable
 fun WaveformView(
     audioPath: String,
+    cachedWaveform: String? = null, // 缓存的波形数据（CSV 格式）
     progress: Float = 0f, // 0.0 to 1.0
     modifier: Modifier = Modifier
 ) {
-    // Get audio duration
-    val audioDuration = getAudioDuration(audioPath)
+    val context = LocalContext.current
+
+    // Convert relative path to absolute path
+    val fullPath = remember(audioPath) {
+        if (audioPath.startsWith("/")) {
+            audioPath // Already absolute
+        } else {
+            // Relative path, construct full path
+            File(context.filesDir, "recordings/$audioPath").absolutePath
+        }
+    }
+
+    // State for audio duration and waveform data
+    var audioDuration by remember(fullPath) { mutableStateOf(0L) }
+    var waveformData by remember(fullPath, cachedWaveform) { mutableStateOf<List<Float>>(emptyList()) }
+
     val durationText = formatDuration(audioDuration)
 
-    // Generate pseudo-waveform data based on file hash for consistency
-    val waveformData = remember(audioPath) {
-        generatePseudoWaveform(audioPath, 60)
+    // Load audio data asynchronously
+    LaunchedEffect(fullPath, cachedWaveform) {
+        val duration = withContext(Dispatchers.IO) {
+            WaveformExtractor.getAudioDuration(fullPath)
+        }
+
+        val waveform = if (!cachedWaveform.isNullOrEmpty()) {
+            // Use cached waveform
+            try {
+                cachedWaveform.split(",").map { it.toFloat() }
+            } catch (e: Exception) {
+                Log.e("WaveformView", "Failed to parse cached waveform", e)
+                withContext(Dispatchers.IO) {
+                    WaveformExtractor.extractWaveform(fullPath, 120)
+                }
+            }
+        } else {
+            // Extract new waveform
+            withContext(Dispatchers.IO) {
+                WaveformExtractor.extractWaveform(fullPath, 120)
+            }
+        }
+
+        // Update on main thread
+        audioDuration = duration
+        waveformData = waveform
+        Log.d("WaveformView", "UI received waveform: ${waveform.take(5)} (cached=${!cachedWaveform.isNullOrEmpty()})")
+    }
+
+    // Use default waveform while loading
+    val displayWaveform = if (waveformData.isEmpty()) {
+        List(120) { 0.5f }
+    } else {
+        waveformData
     }
 
     Column(
@@ -47,12 +93,12 @@ fun WaveformView(
             val width = size.width
             val height = size.height
             val centerY = height / 2
-            val barWidth = width / waveformData.size
+            val barWidth = width / displayWaveform.size
             val progressX = width * progress
 
-            waveformData.forEachIndexed { index, amplitude ->
+            displayWaveform.forEachIndexed { index, amplitude ->
                 val x = index * barWidth
-                val barHeight = amplitude * height * 0.4f
+                val barHeight = amplitude * height * 0.9f // 增加到 90% 高度
 
                 // Draw waveform bar
                 val color = if (x <= progressX) {
@@ -65,7 +111,7 @@ fun WaveformView(
                     color = color,
                     start = Offset(x + barWidth / 2, centerY - barHeight / 2),
                     end = Offset(x + barWidth / 2, centerY + barHeight / 2),
-                    strokeWidth = (barWidth * 0.7f).coerceAtLeast(2f)
+                    strokeWidth = (barWidth * 0.35f).coerceAtLeast(1f) // 减少到 35% 宽度
                 )
             }
 
@@ -80,70 +126,23 @@ fun WaveformView(
             }
         }
 
-        // Duration text
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (progress > 0f) {
-                    formatDuration((audioDuration * progress).toLong())
-                } else {
-                    "00:00"
-                },
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = durationText,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // Duration text in "xx s/xx s" format (centered)
+        val currentSeconds = if (progress > 0f) {
+            ((audioDuration * progress) / 1000).toInt()
+        } else {
+            0
         }
+        val totalSeconds = (audioDuration / 1000).toInt()
+
+        Text(
+            text = "${currentSeconds}s/${totalSeconds}s",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
-}
-
-/**
- * Generate pseudo-waveform data based on audio file hash
- * This creates a consistent waveform appearance for the same file
- */
-private fun generatePseudoWaveform(audioPath: String, barCount: Int): List<Float> {
-    val file = File(audioPath)
-    if (!file.exists()) {
-        // Return default waveform if file doesn't exist
-        return List(barCount) { 0.5f }
-    }
-
-    // Use file name hash as seed for consistent pseudo-random generation
-    val seed = audioPath.hashCode()
-    val random = Random(seed)
-
-    return List(barCount) {
-        // Generate amplitude between 0.2 and 1.0 with some smoothing
-        val baseAmplitude = random.nextFloat() * 0.8f + 0.2f
-        // Add some wave pattern for more natural look
-        val wavePattern = abs(sin((it.toFloat() / barCount) * 6.28f)) * 0.3f
-        (baseAmplitude + wavePattern).coerceIn(0.2f, 1.0f)
-    }
-}
-
-/**
- * Get audio duration in milliseconds
- * For now, estimate based on file size (this is a simplification)
- * TODO: Use MediaMetadataRetriever for accurate duration
- */
-private fun getAudioDuration(audioPath: String): Long {
-    val file = File(audioPath)
-    if (!file.exists()) return 0L
-
-    // Estimate: AAC 128kbps ≈ 16KB/s
-    // This is a rough estimate; actual implementation should use MediaMetadataRetriever
-    val fileSizeKB = file.length() / 1024
-    val estimatedSeconds = fileSizeKB / 16
-
-    return estimatedSeconds * 1000
 }
 
 /**
@@ -154,9 +153,4 @@ private fun formatDuration(durationMs: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format("%02d:%02d", minutes, seconds)
-}
-
-@Composable
-private fun <T> remember(key1: Any?, calculation: () -> T): T {
-    return androidx.compose.runtime.remember(key1) { calculation() }
 }

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import org.haokee.recorder.data.model.Thought
 
-@Database(entities = [Thought::class], version = 1, exportSchema = false)
+@Database(entities = [Thought::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class ThoughtDatabase : RoomDatabase() {
     abstract fun thoughtDao(): ThoughtDao
@@ -22,7 +22,9 @@ abstract class ThoughtDatabase : RoomDatabase() {
                     context.applicationContext,
                     ThoughtDatabase::class.java,
                     "thought_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration() // 开发阶段使用，会清空数据
+                    .build()
                 INSTANCE = instance
                 instance
             }

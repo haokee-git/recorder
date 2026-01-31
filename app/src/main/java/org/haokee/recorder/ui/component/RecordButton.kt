@@ -1,5 +1,6 @@
 package org.haokee.recorder.ui.component
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.size
@@ -13,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -22,6 +24,8 @@ fun RecordButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
+
     // Animate corner radius: circle (36.dp) to rounded rect (12.dp)
     val cornerRadius by animateDpAsState(
         targetValue = if (isRecording) 12.dp else 36.dp,
@@ -30,7 +34,10 @@ fun RecordButton(
     )
 
     FloatingActionButton(
-        onClick = onClick,
+        onClick = {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            onClick()
+        },
         containerColor = if (isRecording) Color.Red else Color(0xFF4CAF50), // Green when idle, Red when recording
         shape = RoundedCornerShape(cornerRadius),
         modifier = modifier.size(72.dp)
