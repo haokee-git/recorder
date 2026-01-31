@@ -266,6 +266,7 @@ fun RecorderScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .wrapContentHeight()
                 .align(Alignment.TopEnd)
         ) {
             androidx.compose.animation.AnimatedVisibility(
@@ -513,12 +514,16 @@ private fun ColorFilterDropdown(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.width(200.dp),
+        modifier = modifier
+            .width(200.dp)
+            .wrapContentHeight(),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .padding(12.dp)
+                .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Color grid - Row 1

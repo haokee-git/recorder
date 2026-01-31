@@ -46,6 +46,7 @@ fun WheelTimePickerDialog(
     var selectedDay by remember { mutableIntStateOf(currentTime.dayOfMonth) }
     var selectedHour by remember { mutableIntStateOf(currentTime.hour) }
     var selectedMinute by remember { mutableIntStateOf(currentTime.minute) }
+    var isDayAdjusting by remember { mutableStateOf(false) }
 
     // Calculate days in month (considering leap year)
     val daysInMonth = remember(selectedYear, selectedMonth) {
@@ -58,7 +59,11 @@ fun WheelTimePickerDialog(
     // Update selectedDay state when adjusted
     LaunchedEffect(effectiveDay) {
         if (selectedDay != effectiveDay) {
+            isDayAdjusting = true
             selectedDay = effectiveDay
+            // 短暂延迟后重置标志，确保振动已被抑制
+            kotlinx.coroutines.delay(100)
+            isDayAdjusting = false
         }
     }
 
@@ -127,7 +132,8 @@ fun WheelTimePickerDialog(
                             onItemSelected = { selectedDay = it },
                             modifier = Modifier.weight(1f),
                             cyclic = true,
-                            key = "$selectedYear-$selectedMonth-$daysInMonth"
+                            key = "$selectedYear-$selectedMonth-$daysInMonth",
+                            suppressVibration = isDayAdjusting
                         )
                     }
                 }
@@ -224,7 +230,8 @@ fun DrumRollPicker(
     onItemSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
     cyclic: Boolean = false,
-    key: String? = null
+    key: String? = null,
+    suppressVibration: Boolean = false
 ) {
     val view = LocalView.current
     val scope = rememberCoroutineScope()
@@ -274,8 +281,10 @@ fun DrumRollPicker(
                 if (actualValue != lastNotifiedValue) {
                     onItemSelected(actualValue)
                     lastNotifiedValue = actualValue
-                    // 值改变时立即振动
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    // 值改变时立即振动（除非被抑制）
+                    if (!suppressVibration) {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    }
                 }
             }
     }
