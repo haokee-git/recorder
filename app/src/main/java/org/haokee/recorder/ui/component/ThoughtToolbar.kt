@@ -113,8 +113,8 @@ private fun DeleteButton(
             contentColor = if (isPending) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         ),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-        modifier = Modifier.height(32.dp)
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+        modifier = Modifier.height(24.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -123,12 +123,12 @@ private fun DeleteButton(
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = if (isPending) "确定" else "删除",
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(14.dp)
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(3.dp))
             Text(
                 text = if (isPending) "确定" else "删除",
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelSmall
             )
         }
     }
@@ -152,8 +152,8 @@ private fun ToolbarButton(
             contentColor = MaterialTheme.colorScheme.primary,
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         ),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-        modifier = Modifier.height(32.dp)
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+        modifier = Modifier.height(24.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -162,12 +162,12 @@ private fun ToolbarButton(
             Icon(
                 imageVector = icon,
                 contentDescription = text,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(14.dp)
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(3.dp))
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelSmall
             )
         }
     }
