@@ -245,7 +245,6 @@ fun DrumRollPicker(
     var isDragging by remember { mutableStateOf(false) }
     var isFling by remember { mutableStateOf(false) }
     var lastNotifiedValue by remember { mutableIntStateOf(-1) }
-    var previousSnapValue by remember { mutableIntStateOf(-1) }
 
     // Convert item units to pixels for rendering
     val scrollOffset by remember { derivedStateOf { scrollIndex.value * itemHeightPx } }
@@ -255,7 +254,6 @@ fun DrumRollPicker(
         if (!isDragging && !isFling) {
             scrollIndex.snapTo(initialScrollIndex)
             lastNotifiedValue = -1
-            previousSnapValue = -1
         }
     }
 
@@ -276,6 +274,8 @@ fun DrumRollPicker(
                 if (actualValue != lastNotifiedValue) {
                     onItemSelected(actualValue)
                     lastNotifiedValue = actualValue
+                    // 值改变时立即振动
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 }
             }
     }
@@ -285,25 +285,10 @@ fun DrumRollPicker(
         if (!isDragging && !isFling) {
             val targetIndex = scrollIndex.value.roundToInt()
 
-            // Calculate the actual value at target index
-            val actualIndex = if (cyclic) {
-                val mod = targetIndex % items.size
-                if (mod < 0) mod + items.size else mod
-            } else {
-                targetIndex.coerceIn(0, items.lastIndex)
-            }
-            val actualValue = items[actualIndex]
-
             scrollIndex.animateTo(
                 targetValue = targetIndex.toFloat(),
                 animationSpec = tween(durationMillis = 200)
             )
-
-            // Only vibrate if the value actually changed
-            if (actualValue != previousSnapValue) {
-                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                previousSnapValue = actualValue
-            }
         }
     }
 

@@ -22,6 +22,7 @@ fun ThoughtToolbar(
     hasSelection: Boolean,
     isSingleSelection: Boolean,
     isAllTranscribed: Boolean,
+    isDeletePending: Boolean,
     onBatchConvertClick: () -> Unit,
     onEditClick: () -> Unit,
     onSetAlarmClick: () -> Unit,
@@ -71,10 +72,9 @@ fun ThoughtToolbar(
                     onClick = onSetColorClick,
                     view = view
                 )
-                ToolbarButton(
-                    icon = Icons.Default.Delete,
-                    text = "删除",
+                DeleteButton(
                     enabled = hasSelection,
+                    isPending = isDeletePending,
                     onClick = onDeleteClick,
                     view = view
                 )
@@ -93,6 +93,45 @@ fun ThoughtToolbar(
                 )
             }
         }
+}
+
+@Composable
+private fun DeleteButton(
+    enabled: Boolean,
+    isPending: Boolean,
+    onClick: () -> Unit,
+    view: android.view.View
+) {
+    TextButton(
+        onClick = {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            onClick()
+        },
+        enabled = enabled,
+        colors = ButtonDefaults.textButtonColors(
+            containerColor = if (isPending) androidx.compose.ui.graphics.Color.Red else androidx.compose.ui.graphics.Color.Transparent,
+            contentColor = if (isPending) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
+            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        ),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+        modifier = Modifier.height(32.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = if (isPending) "确定" else "删除",
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = if (isPending) "确定" else "删除",
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+    }
 }
 
 @Composable

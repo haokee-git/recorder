@@ -58,6 +58,14 @@ fun RecorderScreen(
     // Alarm time picker dialog state
     var showAlarmPicker by remember { mutableStateOf(false) }
 
+    // Delete pending state
+    var isDeletePending by remember { mutableStateOf(false) }
+
+    // Reset delete pending state when selection changes
+    LaunchedEffect(uiState.selectedThoughts) {
+        isDeletePending = false
+    }
+
     // Permission handling
     val recordAudioPermissionState = rememberPermissionState(
         permission = Manifest.permission.RECORD_AUDIO
@@ -140,10 +148,15 @@ fun RecorderScreen(
                         hasSelection = uiState.selectedThoughts.isNotEmpty(),
                         isSingleSelection = uiState.selectedThoughts.size == 1,
                         isAllTranscribed = isAllTranscribed,
+                        isDeletePending = isDeletePending,
                         onBatchConvertClick = {
+                            isDeletePending = false
+                            viewModel.stopPlayback()
                             viewModel.convertSelectedThoughts()
                         },
                         onEditClick = {
+                            isDeletePending = false
+                            viewModel.stopPlayback()
                             // Get the single selected thought
                             val selectedId = uiState.selectedThoughts.firstOrNull()
                             if (selectedId != null) {
@@ -151,15 +164,27 @@ fun RecorderScreen(
                             }
                         },
                         onSetAlarmClick = {
+                            isDeletePending = false
                             showAlarmPicker = true
                         },
                         onSetColorClick = {
+                            isDeletePending = false
+                            viewModel.stopPlayback()
                             showColorPicker = true
                         },
                         onDeleteClick = {
-                            viewModel.deleteSelectedThoughts()
+                            if (isDeletePending) {
+                                // 第二次点击：真正删除
+                                viewModel.stopPlayback()
+                                viewModel.deleteSelectedThoughts()
+                                isDeletePending = false
+                            } else {
+                                // 第一次点击：进入待确认状态
+                                isDeletePending = true
+                            }
                         },
                         onFilterClick = {
+                            isDeletePending = false
                             showColorFilter = true
                         }
                     )
@@ -550,6 +575,7 @@ private fun FilterColorCircle(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val view = LocalView.current
     val cornerRadius by animateDpAsState(
         targetValue = if (isSelected) 8.dp else 28.dp,
         animationSpec = tween(durationMillis = 200),
@@ -580,7 +606,10 @@ private fun FilterColorCircle(
             .padding(1.dp)
             .clip(RoundedCornerShape(innerCornerRadius))
             .background(color.color)
-            .clickable(onClick = onClick),
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.size(24.dp)) {
@@ -617,6 +646,7 @@ private fun NoColorFilterCircle(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val view = LocalView.current
     val cornerRadius by animateDpAsState(
         targetValue = if (isSelected) 8.dp else 28.dp,
         animationSpec = tween(durationMillis = 200),
@@ -633,7 +663,10 @@ private fun NoColorFilterCircle(
             .padding(1.dp)
             .clip(RoundedCornerShape(innerCornerRadius))
             .background(androidx.compose.ui.graphics.Color.White)
-            .clickable(onClick = onClick),
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         // Draw diagonal slash that extends from corner to corner
