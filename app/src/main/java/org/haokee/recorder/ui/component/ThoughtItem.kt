@@ -108,7 +108,7 @@ fun TranscribedThoughtItem(
                         WaveformView(
                             audioPath = thought.audioPath,
                             cachedWaveform = thought.waveformData,
-                            progress = if (isPlaying) playbackProgress else 0f,
+                            progress = playbackProgress,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -250,7 +250,7 @@ fun OriginalThoughtItem(
                         WaveformView(
                             audioPath = thought.audioPath,
                             cachedWaveform = thought.waveformData,
-                            progress = if (isPlaying) playbackProgress else 0f,
+                            progress = playbackProgress,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -357,7 +357,7 @@ fun ExpiredThoughtItem(
                         WaveformView(
                             audioPath = thought.audioPath,
                             cachedWaveform = thought.waveformData,
-                            progress = if (isPlaying) playbackProgress else 0f,
+                            progress = playbackProgress,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

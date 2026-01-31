@@ -127,11 +127,7 @@ fun WaveformView(
         }
 
         // Duration text in "xx s/xx s" format (centered)
-        val currentSeconds = if (progress > 0f) {
-            ((audioDuration * progress) / 1000).toInt()
-        } else {
-            0
-        }
+        val currentSeconds = ((audioDuration * progress) / 1000).toInt()
         val totalSeconds = (audioDuration / 1000).toInt()
 
         Text(

@@ -193,9 +193,19 @@ fun RecorderScreen(
                 },
                 onSelectAllInSection = { thoughts, selectAll ->
                     if (selectAll) {
-                        thoughts.forEach { viewModel.toggleThoughtSelection(it.id) }
+                        // 全选：只选择未选中的项
+                        thoughts.forEach {
+                            if (it.id !in uiState.selectedThoughts) {
+                                viewModel.toggleThoughtSelection(it.id)
+                            }
+                        }
                     } else {
-                        thoughts.forEach { if (it.id in uiState.selectedThoughts) viewModel.toggleThoughtSelection(it.id) }
+                        // 取消全选：取消该区域的所有选中项
+                        thoughts.forEach {
+                            if (it.id in uiState.selectedThoughts) {
+                                viewModel.toggleThoughtSelection(it.id)
+                            }
+                        }
                     }
                 },
                 onPlayClick = { thought ->
@@ -456,7 +466,8 @@ private fun SelectionInfoBar(
                 contentColor = MaterialTheme.colorScheme.primary,
                 disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             ),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            modifier = Modifier.height(32.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
@@ -464,7 +475,7 @@ private fun SelectionInfoBar(
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Text("清除选中", style = MaterialTheme.typography.bodySmall)
+            Text("取消选中", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
