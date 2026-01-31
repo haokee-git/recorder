@@ -113,7 +113,8 @@ fun WheelTimePickerDialog(
                             items = (1900..2100).toList(),
                             selectedItem = selectedYear,
                             onItemSelected = { selectedYear = it },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            suppressVibration = true // 年改变时日会振动，所以年本身不振动
                         )
 
                         // Month picker
@@ -122,7 +123,8 @@ fun WheelTimePickerDialog(
                             selectedItem = selectedMonth,
                             onItemSelected = { selectedMonth = it },
                             modifier = Modifier.weight(1f),
-                            cyclic = true
+                            cyclic = true,
+                            suppressVibration = true // 月改变时日会振动，所以月本身不振动
                         )
 
                         // Day picker

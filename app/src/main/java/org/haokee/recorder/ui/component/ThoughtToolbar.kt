@@ -114,7 +114,8 @@ private fun DeleteButton(
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         ),
         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-        modifier = Modifier.height(24.dp)
+        modifier = Modifier.height(24.dp),
+        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -153,7 +154,8 @@ private fun ToolbarButton(
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         ),
         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-        modifier = Modifier.height(24.dp)
+        modifier = Modifier.height(24.dp),
+        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
