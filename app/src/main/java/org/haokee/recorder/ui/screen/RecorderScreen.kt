@@ -112,14 +112,6 @@ fun RecorderScreen(
                 }
             )
         },
-        bottomBar = {
-            // Loading indicator at bottom
-            if (uiState.isLoading) {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(
@@ -322,6 +314,15 @@ fun RecorderScreen(
                         }
                     }
                 }
+            )
+        }
+
+        // Floating loading indicator at bottom (doesn't affect layout)
+        if (uiState.isLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
             )
         }
         }
