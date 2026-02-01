@@ -210,7 +210,9 @@ fun WheelTimePickerDialog(
                                 selectedMonth,
                                 selectedDay,
                                 selectedHour,
-                                selectedMinute
+                                selectedMinute,
+                                0,  // 秒数设为0
+                                0   // 纳秒设为0
                             )
                             onTimeSelected(alarmTime)
                             onDismiss()
