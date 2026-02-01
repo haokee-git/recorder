@@ -82,7 +82,7 @@ fun TranscribedThoughtItem(
                 // First row: Checkbox, Title + Waveform, Play button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Checkbox
@@ -129,21 +129,24 @@ fun TranscribedThoughtItem(
                     }
                 }
 
-                // Content text (完全居左，不添加 padding)
+                // Content text (和标题左端对齐)
                 Text(
                     text = thought.content ?: "",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 36.dp)
                 )
 
-                // Time section (左对齐，和标题平齐)
+                // Time section (和标题左端对齐)
                 Column(
-                    modifier = Modifier.padding(start = 48.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 36.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // Alarm time (如果有)
+                    // Alarm time (如果有，居左)
                     thought.alarmTime?.let { alarmTime ->
                         val isExpired = alarmTime.isBefore(java.time.LocalDateTime.now())
                         Row(
@@ -164,11 +167,12 @@ fun TranscribedThoughtItem(
                         }
                     }
 
-                    // Created time
+                    // Created time (居右)
                     Text(
                         text = thought.createdAt.toDisplayString(),
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.End)
                     )
                 }
             }
@@ -220,7 +224,7 @@ fun OriginalThoughtItem(
                 // First row: Checkbox, Title + Waveform, Play button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Checkbox
@@ -235,7 +239,7 @@ fun OriginalThoughtItem(
                     // Title and Waveform
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -248,13 +252,12 @@ fun OriginalThoughtItem(
                             )
                             Surface(
                                 color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = MaterialTheme.shapes.small,
-                                modifier = Modifier.padding(top = 2.dp) // 略微下移对齐
+                                shape = MaterialTheme.shapes.small
                             ) {
                                 Text(
                                     text = "未转换",
-                                    fontSize = 10.sp, // 减小字号
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    fontSize = 9.sp,
+                                    modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp)
                                 )
                             }
                         }
@@ -281,12 +284,14 @@ fun OriginalThoughtItem(
                     }
                 }
 
-                // Time section (左对齐，和标题平齐)
+                // Time section (和标题左端对齐)
                 Column(
-                    modifier = Modifier.padding(start = 48.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 36.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // Alarm time (如果有)
+                    // Alarm time (如果有，居左)
                     thought.alarmTime?.let { alarmTime ->
                         val isExpired = alarmTime.isBefore(java.time.LocalDateTime.now())
                         Row(
@@ -307,11 +312,12 @@ fun OriginalThoughtItem(
                         }
                     }
 
-                    // Created time
+                    // Created time (居右)
                     Text(
                         text = thought.createdAt.toDisplayString(),
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.End)
                     )
                 }
             }
@@ -363,7 +369,7 @@ fun ExpiredThoughtItem(
                 // First row: Checkbox, Title + Waveform, Play button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Checkbox
@@ -411,23 +417,26 @@ fun ExpiredThoughtItem(
                     }
                 }
 
-                // Content text (if transcribed) (完全居左，不添加 padding)
+                // Content text (if transcribed) (和标题左端对齐)
                 if (thought.isTranscribed && thought.content != null) {
                     Text(
                         text = thought.content,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 36.dp)
                     )
                 }
 
-                // Time section (左对齐，和标题平齐)
+                // Time section (和标题左端对齐)
                 Column(
-                    modifier = Modifier.padding(start = 48.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 36.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // Alarm time (已过期，显示红色)
+                    // Alarm time (已过期，显示红色，居左)
                     thought.alarmTime?.let { alarmTime ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -447,11 +456,12 @@ fun ExpiredThoughtItem(
                         }
                     }
 
-                    // Created time
+                    // Created time (居右)
                     Text(
                         text = thought.createdAt.toDisplayString(),
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.End)
                     )
                 }
             }

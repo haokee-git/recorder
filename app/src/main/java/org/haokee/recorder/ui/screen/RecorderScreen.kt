@@ -236,6 +236,8 @@ fun RecorderScreen(
                         selectedCount = uiState.selectedThoughts.size,
                         onClearSelection = { viewModel.clearSelection() }
                     )
+                    // Spacer for visual breathing room
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 

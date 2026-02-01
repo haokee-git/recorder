@@ -33,6 +33,9 @@ class MainActivity : ComponentActivity() {
         val factory = ThoughtViewModelFactory(applicationContext, repository, audioRecorder, audioPlayer)
         viewModel = ViewModelProvider(this, factory)[ThoughtListViewModel::class.java]
 
+        // Handle notification click (from alarm)
+        handleNotificationIntent(intent)
+
         setContent {
             RecorderTheme {
                 RecorderScreen(
@@ -40,6 +43,18 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: android.content.Intent?) {
+        intent?.getStringExtra("thought_id")?.let { thoughtId ->
+            viewModel.selectAndScrollToThought(thoughtId)
         }
     }
 

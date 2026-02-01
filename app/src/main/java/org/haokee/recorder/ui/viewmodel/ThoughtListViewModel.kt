@@ -297,6 +297,20 @@ class ThoughtListViewModel(
         _uiState.update { it.copy(scrollToThoughtId = null) }
     }
 
+    /**
+     * 选择并滚动到指定的感言（用于通知点击）
+     * 清除其他选择，只选择这一条感言
+     */
+    fun selectAndScrollToThought(thoughtId: String) {
+        _uiState.update { state ->
+            state.copy(
+                selectedThoughts = setOf(thoughtId),
+                isMultiSelectMode = true,
+                scrollToThoughtId = thoughtId
+            )
+        }
+    }
+
     // Phase 2: Speech-to-text functions
     fun convertSelectedThoughts() {
         viewModelScope.launch {
