@@ -45,6 +45,25 @@ class ThoughtListViewModel(
         loadThoughts()
         startPlaybackProgressUpdater()
         initializeWhisper()
+        startMinutelyRefresh()
+    }
+
+    private fun startMinutelyRefresh() {
+        viewModelScope.launch {
+            while (true) {
+                // 计算到下一个整分钟还有多少毫秒
+                val now = LocalDateTime.now()
+                val secondsUntilNextMinute = 60 - now.second
+                val nanosUntilNextMinute = 1_000_000_000 - now.nano
+                val millisUntilNextMinute = secondsUntilNextMinute * 1000L + nanosUntilNextMinute / 1_000_000
+
+                // 等待到下一个整分钟的第0秒
+                delay(millisUntilNextMinute)
+
+                // 刷新列表（闹钟过期的感言会自动移到"已过期"区域）
+                loadThoughts()
+            }
+        }
     }
 
     private fun initializeWhisper() {

@@ -29,7 +29,9 @@ object AlarmHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val triggerTime = alarmTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        // 将秒数和纳秒设为0，确保在整分钟的第0秒响
+        val exactAlarmTime = alarmTime.withSecond(0).withNano(0)
+        val triggerTime = exactAlarmTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
         // Check if we can schedule exact alarms on Android 12+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
