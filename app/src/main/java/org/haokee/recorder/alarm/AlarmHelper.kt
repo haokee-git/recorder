@@ -41,29 +41,21 @@ object AlarmHelper {
         android.util.Log.d("AlarmHelper", "当前时间: ${LocalDateTime.now()}")
         android.util.Log.d("AlarmHelper", "================================")
 
-        // Check if we can schedule exact alarms on Android 12+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTime,
-                    pendingIntent
-                )
-            } else {
-                // Fallback to inexact alarm if exact alarm permission not granted
-                alarmManager.setAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTime,
-                    pendingIntent
-                )
-            }
-        } else {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerTime,
-                pendingIntent
-            )
-        }
+        // 使用 setAlarmClock() 确保精确触发（即使在 Doze 模式下）
+        val showIntent = Intent(context, org.haokee.recorder.MainActivity::class.java)
+        val showPendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            showIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmClockInfo = android.app.AlarmManager.AlarmClockInfo(
+            triggerTime,
+            showPendingIntent
+        )
+
+        alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
 
         // Send immediate confirmation notification (使用调整后的精确时间)
         NotificationHelper.sendAlarmSetNotification(context, thoughtTitle, exactAlarmTime)
