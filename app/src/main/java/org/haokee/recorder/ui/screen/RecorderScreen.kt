@@ -42,6 +42,7 @@ fun RecorderScreen(
 ) {
     val view = LocalView.current
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
     val recordingState by viewModel.audioRecorder.recordingState.collectAsState()
     val playbackState by viewModel.audioPlayer.playbackState.collectAsState()
@@ -134,7 +135,7 @@ fun RecorderScreen(
                         pendingAlarmTime = null
 
                         // 显示成功提示
-                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                        coroutineScope.launch {
                             snackbarHostState.showSnackbar("闹钟设置成功")
                         }
                     }
