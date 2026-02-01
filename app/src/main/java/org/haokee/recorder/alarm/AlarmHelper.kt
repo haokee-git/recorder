@@ -14,24 +14,28 @@ import java.time.ZoneId
 
 object AlarmHelper {
     /**
-     * 检查并请求精确闹钟权限
-     * @return true 如果有权限，false 如果没有权限（会自动打开设置页面）
+     * 检查是否有精确闹钟权限
      */
-    fun checkAndRequestAlarmPermission(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    fun hasAlarmPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            if (!alarmManager.canScheduleExactAlarms()) {
-                // 没有权限，打开设置页面
-                Toast.makeText(context, "需要授予精确闹钟权限，即将跳转到设置页面", Toast.LENGTH_LONG).show()
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(intent)
-                return false
-            }
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
         }
-        return true
+    }
+
+    /**
+     * 打开系统设置页面请求精确闹钟权限
+     */
+    fun requestAlarmPermission(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                data = Uri.parse("package:${context.packageName}")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        }
     }
 
     fun scheduleAlarm(
@@ -41,12 +45,6 @@ object AlarmHelper {
         alarmTime: LocalDateTime
     ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        // 先检查权限
-        if (!checkAndRequestAlarmPermission(context)) {
-            Toast.makeText(context, "请在设置中授予精确闹钟权限后重试", Toast.LENGTH_SHORT).show()
-            return
-        }
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra("thought_id", thoughtId)

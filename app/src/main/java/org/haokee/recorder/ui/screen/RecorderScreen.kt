@@ -58,6 +58,7 @@ fun RecorderScreen(
 
     // Alarm time picker dialog state
     var showAlarmPicker by remember { mutableStateOf(false) }
+    var pendingAlarmTime by remember { mutableStateOf<java.time.LocalDateTime?>(null) }
 
     // Delete pending state
     var isDeletePending by remember { mutableStateOf(false) }
@@ -97,6 +98,52 @@ fun RecorderScreen(
         uiState.error?.let { error ->
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
+        }
+    }
+
+    // 监听应用恢复（从设置页面返回），检查权限并设置待处理的闹钟
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                // 应用恢复，检查是否有待设置的闹钟
+                pendingAlarmTime?.let { alarmTime ->
+                    if (org.haokee.recorder.alarm.AlarmHelper.hasAlarmPermission(context)) {
+                        // 有权限了，设置闹钟
+                        viewModel.setAlarmForSelectedThoughts(alarmTime)
+
+                        val selectedIds = uiState.selectedThoughts
+                        val allThoughts = uiState.transcribedThoughts +
+                                uiState.originalThoughts +
+                                uiState.expiredAlarmThoughts
+
+                        selectedIds.forEach { id ->
+                            val thought = allThoughts.find { it.id == id }
+                            thought?.let {
+                                val title = if (it.isTranscribed) it.title ?: "感言提醒" else "感言提醒"
+                                org.haokee.recorder.alarm.AlarmHelper.scheduleAlarm(
+                                    context,
+                                    it.id,
+                                    title,
+                                    alarmTime
+                                )
+                            }
+                        }
+
+                        // 清除待处理的闹钟时间
+                        pendingAlarmTime = null
+
+                        // 显示成功提示
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                            snackbarHostState.showSnackbar("闹钟设置成功")
+                        }
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -376,24 +423,36 @@ fun RecorderScreen(
                 showAlarmPicker = false
             },
             onTimeSelected = { alarmTime ->
-                viewModel.setAlarmForSelectedThoughts(alarmTime)
+                // 先检查精确闹钟权限
+                if (!org.haokee.recorder.alarm.AlarmHelper.hasAlarmPermission(context)) {
+                    // 没有权限，保存待设置的闹钟时间，然后跳转到设置页面
+                    pendingAlarmTime = alarmTime
+                    android.widget.Toast.makeText(
+                        context,
+                        "需要授予精确闹钟权限，即将跳转到设置页面",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    org.haokee.recorder.alarm.AlarmHelper.requestAlarmPermission(context)
+                } else {
+                    // 有权限，直接设置闹钟
+                    viewModel.setAlarmForSelectedThoughts(alarmTime)
 
-                // Schedule alarms for selected thoughts
-                val selectedIds = uiState.selectedThoughts
-                val allThoughts = uiState.transcribedThoughts +
-                        uiState.originalThoughts +
-                        uiState.expiredAlarmThoughts
+                    val selectedIds = uiState.selectedThoughts
+                    val allThoughts = uiState.transcribedThoughts +
+                            uiState.originalThoughts +
+                            uiState.expiredAlarmThoughts
 
-                selectedIds.forEach { id ->
-                    val thought = allThoughts.find { it.id == id }
-                    thought?.let {
-                        val title = if (it.isTranscribed) it.title ?: "感言提醒" else "感言提醒"
-                        org.haokee.recorder.alarm.AlarmHelper.scheduleAlarm(
-                            context,
-                            it.id,
-                            title,
-                            alarmTime
-                        )
+                    selectedIds.forEach { id ->
+                        val thought = allThoughts.find { it.id == id }
+                        thought?.let {
+                            val title = if (it.isTranscribed) it.title ?: "感言提醒" else "感言提醒"
+                            org.haokee.recorder.alarm.AlarmHelper.scheduleAlarm(
+                                context,
+                                it.id,
+                                title,
+                                alarmTime
+                            )
+                        }
                     }
                 }
             }
