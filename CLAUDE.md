@@ -559,3 +559,196 @@ Whisper 多语言模型识别结果可能包含繁体中文，用户需要简体
 - 通过修改 collapsed 状态触发展开动画
 - kotlinx.coroutines.delay 等待动画完成
 - 确保折叠/展开状态正确同步
+
+---
+
+### 2026-02-01 - 振动反馈与布局优化
+
+#### 需求背景
+修复振动反馈和布局问题，提升交互体验的流畅度和准确性。
+
+#### 具体修复
+
+**1. 时间选择器振动优化**
+- **问题**：年月滚动时会触发两次振动（年/月本身振动 + 日联动振动）
+- **解决方案**：
+  - 为年、月 DrumRollPicker 添加 `suppressVibration = true` 参数
+  - 移除年月的振动反馈，仅保留日期变化时的振动
+  - 日期自动调整时（如从 31 日调整到 30 日）也抑制振动，避免重复反馈
+- **实现位置**：WheelTimePickerDialog.kt
+
+**2. 工具栏按钮双重振动修复**
+- **问题**：点击提醒、颜色等按钮时会振动两次（手动振动 + Material3 默认振动）
+- **解决方案**：
+  - 为 ToolbarButton 和 DeleteButton 添加自定义 `interactionSource`
+  - 禁用 Material3 的默认触摸反馈效果
+  - 保留手动调用的 `HapticFeedback.KEYBOARD_TAP` 振动
+- **实现位置**：ThoughtToolbar.kt
+
+**3. 工具栏按钮尺寸恢复**
+- **问题**：菜单栏按钮被压缩得太小，影响可用性
+- **解决方案**：
+  - 按钮高度：24.dp → 32.dp
+  - 图标尺寸：14.dp → 18.dp
+  - 内边距：horizontal 6.dp → 8.dp, vertical 0.dp → 4.dp
+  - 文字样式：labelSmall → labelMedium
+  - 图标间距：3.dp → 4.dp
+- **影响组件**：ToolbarButton、DeleteButton、"取消选中"按钮
+
+**4. 进度条浮动布局修复**
+- **问题**：底部加载进度条占用空间，导致录音按钮上移
+- **旧方案**：
+  - 进度条在 Scaffold 的 bottomBar 槽位
+  - 会影响 paddingValues，推动内容上移
+- **新方案**：
+  - 将 Scaffold 包裹在外层 Box 中
+  - 进度条作为独立的浮动元素，直接对齐到外层 Box 的底部
+  - 完全脱离 Scaffold 的布局系统，不影响任何内容的位置
+- **实现位置**：RecorderScreen.kt
+
+#### 技术实现
+
+**振动抑制机制**
+```kotlin
+// DrumRollPicker 支持 suppressVibration 参数
+fun DrumRollPicker(
+    suppressVibration: Boolean = false
+) {
+    if (actualValue != lastNotifiedValue) {
+        onItemSelected(actualValue)
+        lastNotifiedValue = actualValue
+        if (!suppressVibration) {
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+    }
+}
+```
+
+**自定义 InteractionSource**
+```kotlin
+TextButton(
+    interactionSource = remember { MutableInteractionSource() }
+) { ... }
+```
+
+**真正的浮动布局**
+```kotlin
+Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(...) { ... }
+
+    // 浮动进度条（不影响布局）
+    if (uiState.isLoading) {
+        LinearProgressIndicator(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+        )
+    }
+}
+```
+
+#### 影响文件
+- WheelTimePickerDialog.kt: suppressVibration 参数
+- ThoughtToolbar.kt: remember import, 按钮尺寸, interactionSource
+- RecorderScreen.kt: 外层 Box 包裹, 浮动进度条
+
+#### 效果
+- ✅ 时间选择器滚动时只触发一次振动
+- ✅ 工具栏按钮点击时只触发一次振动
+- ✅ 按钮尺寸恢复到合理大小，易于点击
+- ✅ 进度条完全浮动，录音按钮位置固定不变
+
+---
+
+### 2026-02-01 - 闹钟功能修复与即时通知
+
+#### 需求背景
+用户反馈设置提醒后没有收到闹钟声音和通知，需要修复闹钟功能并添加设置成功的即时反馈。
+
+#### 问题分析
+1. **闹钟不响的原因**：
+   - 通知渠道未正确配置铃声
+   - 通知优先级不够高
+   - 缺少明确的系统闹钟铃声设置
+   - AudioAttributes 未设置为 USAGE_ALARM
+
+2. **缺少即时反馈**：
+   - 用户设置闹钟后没有立即的确认反馈
+   - 无法确认闹钟是否设置成功
+
+#### 解决方案
+
+**1. 修复 AlarmReceiver.kt**
+- **添加系统闹钟铃声**：
+  ```kotlin
+  val alarmSound: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+      ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+  ```
+- **配置通知渠道的音频属性**：
+  ```kotlin
+  val audioAttributes = AudioAttributes.Builder()
+      .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+      .setUsage(AudioAttributes.USAGE_ALARM)
+      .build()
+  setSound(alarmSound, audioAttributes)
+  ```
+- **提高通知优先级**：
+  - 渠道重要性：IMPORTANCE_HIGH
+  - 通知优先级：PRIORITY_MAX
+  - 设置为 ongoing 防止误删
+  - 添加 VISIBILITY_PUBLIC 在锁屏显示
+- **增强振动模式**：
+  - 振动模式：`[0, 500, 200, 500, 200, 500]`
+  - 持续时间更长，更容易唤醒用户
+
+**2. 创建 NotificationHelper.kt**
+- **功能**：发送闹钟设置成功的即时确认通知
+- **通知内容**：
+  - 标题："提醒设置成功"
+  - 内容："你已为「[感言标题]」设置 [年月日 时:分] 的提醒"
+  - 标题长度超过 20 字时自动截断并添加省略号
+  - 标题为空时显示"此感言"
+- **通知样式**：
+  - 使用 BigTextStyle 支持长文本显示
+  - 优先级：DEFAULT（不打扰用户，但确保可见）
+  - 自动消失（setAutoCancel）
+- **通知渠道**：独立渠道 "thought_alarm_confirmation_channel"，与闹钟通知分离
+
+**3. 集成即时通知**
+- 在 `AlarmHelper.scheduleAlarm()` 方法的最后调用：
+  ```kotlin
+  NotificationHelper.sendAlarmSetNotification(context, thoughtTitle, alarmTime)
+  ```
+- 设置闹钟的同时立即发送确认通知
+
+#### 技术实现
+
+**新增导入**
+```kotlin
+// AlarmReceiver.kt
+import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.net.Uri
+
+// NotificationHelper.kt
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+```
+
+**时间格式化**
+```kotlin
+val timeFormatter = DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm")
+val formattedTime = alarmTime.format(timeFormatter)
+```
+
+#### 影响文件
+- AlarmReceiver.kt: 添加铃声、提高优先级、增强振动
+- NotificationHelper.kt: 新建文件，处理即时通知
+- AlarmHelper.kt: 调用即时通知
+
+#### 效果
+- ✅ 闹钟到时会播放系统闹钟铃声
+- ✅ 闹钟通知优先级提高，更容易被注意到
+- ✅ 设置闹钟后立即收到确认通知
+- ✅ 确认通知显示完整的设置信息（感言标题 + 时间）
+- ✅ 即使设备休眠也能正常响铃和振动

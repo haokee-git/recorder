@@ -6,6 +6,9 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import org.haokee.recorder.MainActivity
@@ -23,6 +26,10 @@ class AlarmReceiver : BroadcastReceiver() {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        // Get default alarm sound
+        val alarmSound: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
         // Create notification channel for Android O and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -34,6 +41,14 @@ class AlarmReceiver : BroadcastReceiver() {
                 enableVibration(true)
                 enableLights(true)
                 setShowBadge(true)
+                // Set alarm sound to the channel
+                val audioAttributes = AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .build()
+                setSound(alarmSound, audioAttributes)
+                // Set vibration pattern
+                vibrationPattern = longArrayOf(0, 500, 200, 500, 200, 500)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -56,13 +71,15 @@ class AlarmReceiver : BroadcastReceiver() {
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm) // Use system alarm icon
             .setContentTitle(title)
             .setContentText("点击查看您的感言")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sound, vibration, lights
-            .setVibrate(longArrayOf(0, 500, 200, 500)) // Vibration pattern
+            .setSound(alarmSound) // Explicitly set sound for pre-O devices
+            .setVibrate(longArrayOf(0, 500, 200, 500, 200, 500)) // Vibration pattern
             .setFullScreenIntent(pendingIntent, true) // Show as full screen on lock screen
+            .setOngoing(true) // Make it harder to dismiss accidentally
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Show on lock screen
             .build()
 
         notificationManager.notify(thoughtId.hashCode(), notification)

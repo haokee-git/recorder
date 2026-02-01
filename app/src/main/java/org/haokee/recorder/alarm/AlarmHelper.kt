@@ -54,6 +54,9 @@ object AlarmHelper {
                 pendingIntent
             )
         }
+
+        // Send immediate confirmation notification
+        NotificationHelper.sendAlarmSetNotification(context, thoughtTitle, alarmTime)
     }
 
     fun cancelAlarm(context: Context, thoughtId: String) {

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
@@ -113,8 +114,8 @@ private fun DeleteButton(
             contentColor = if (isPending) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         ),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-        modifier = Modifier.height(24.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        modifier = Modifier.height(32.dp),
         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     ) {
         Row(
@@ -124,12 +125,12 @@ private fun DeleteButton(
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = if (isPending) "确定" else "删除",
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(3.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = if (isPending) "确定" else "删除",
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelMedium
             )
         }
     }
@@ -153,8 +154,8 @@ private fun ToolbarButton(
             contentColor = MaterialTheme.colorScheme.primary,
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         ),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-        modifier = Modifier.height(24.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        modifier = Modifier.height(32.dp),
         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     ) {
         Row(
@@ -164,12 +165,12 @@ private fun ToolbarButton(
             Icon(
                 imageVector = icon,
                 contentDescription = text,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(3.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelMedium
             )
         }
     }

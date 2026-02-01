@@ -100,20 +100,21 @@ fun RecorderScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            RecorderTopBar(
-                onChatClick = {
-                    // TODO: Phase 3 - Open chat dialog
-                },
-                onSettingsClick = {
-                    // TODO: Phase 4 - Open settings screen
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                RecorderTopBar(
+                    onChatClick = {
+                        // TODO: Phase 3 - Open chat dialog
+                    },
+                    onSettingsClick = {
+                        // TODO: Phase 4 - Open settings screen
+                    }
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -317,14 +318,16 @@ fun RecorderScreen(
             )
         }
 
-        // Floating loading indicator at bottom (doesn't affect layout)
+        }
+    }
+
+        // Truly floating progress bar overlay (outside Scaffold, doesn't affect layout)
         if (uiState.isLoading) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
             )
-        }
         }
     }
 

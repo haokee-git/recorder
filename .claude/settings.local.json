@@ -17,5 +17,6 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:k2-fsa.github.io)"
     ]
-  }
+  },
+  "outputStyle": "default"
 }
