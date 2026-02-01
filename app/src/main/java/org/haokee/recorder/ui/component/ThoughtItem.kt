@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -128,37 +129,47 @@ fun TranscribedThoughtItem(
                     }
                 }
 
-                // Content text
+                // Content text (完全居左，不添加 padding)
                 Text(
                     text = thought.content ?: "",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier // 对齐 checkbox 后的内容
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                // Time row (right aligned)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 48.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                // Time section (左对齐，和标题平齐)
+                Column(
+                    modifier = Modifier.padding(start = 48.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
+                    // Alarm time (如果有)
+                    thought.alarmTime?.let { alarmTime ->
+                        val isExpired = alarmTime.isBefore(java.time.LocalDateTime.now())
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Alarm,
+                                contentDescription = "提醒时间",
+                                modifier = Modifier.size(14.dp),
+                                tint = if (isExpired) Color.Red else MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = alarmTime.toDisplayString() + if (isExpired) " (已过期)" else "",
+                                fontSize = 12.sp,
+                                color = if (isExpired) Color.Red else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // Created time
                     Text(
                         text = thought.createdAt.toDisplayString(),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    thought.alarmTime?.let {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "提醒: ${it.toDisplayString()}",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
                 }
             }
         }
@@ -270,16 +281,39 @@ fun OriginalThoughtItem(
                     }
                 }
 
-                // Time (right aligned)
-                Text(
-                    text = thought.createdAt.toDisplayString(),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 48.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.End
-                )
+                // Time section (左对齐，和标题平齐)
+                Column(
+                    modifier = Modifier.padding(start = 48.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    // Alarm time (如果有)
+                    thought.alarmTime?.let { alarmTime ->
+                        val isExpired = alarmTime.isBefore(java.time.LocalDateTime.now())
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Alarm,
+                                contentDescription = "提醒时间",
+                                modifier = Modifier.size(14.dp),
+                                tint = if (isExpired) Color.Red else MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = alarmTime.toDisplayString() + if (isExpired) " (已过期)" else "",
+                                fontSize = 12.sp,
+                                color = if (isExpired) Color.Red else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // Created time
+                    Text(
+                        text = thought.createdAt.toDisplayString(),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -377,39 +411,48 @@ fun ExpiredThoughtItem(
                     }
                 }
 
-                // Content text (if transcribed)
+                // Content text (if transcribed) (完全居左，不添加 padding)
                 if (thought.isTranscribed && thought.content != null) {
                     Text(
                         text = thought.content,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Time row (right aligned)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 48.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                // Time section (左对齐，和标题平齐)
+                Column(
+                    modifier = Modifier.padding(start = 48.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
+                    // Alarm time (已过期，显示红色)
+                    thought.alarmTime?.let { alarmTime ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Alarm,
+                                contentDescription = "提醒时间",
+                                modifier = Modifier.size(14.dp),
+                                tint = Color.Red.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = alarmTime.toDisplayString() + " (已过期)",
+                                fontSize = 12.sp,
+                                color = Color.Red.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    // Created time
                     Text(
                         text = thought.createdAt.toDisplayString(),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    thought.alarmTime?.let {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "已过期: ${it.toDisplayString()}",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                        )
-                    }
                 }
             }
         }
