@@ -57,8 +57,8 @@ object AlarmHelper {
             )
         }
 
-        // Send immediate confirmation notification
-        NotificationHelper.sendAlarmSetNotification(context, thoughtTitle, alarmTime)
+        // Send immediate confirmation notification (使用调整后的精确时间)
+        NotificationHelper.sendAlarmSetNotification(context, thoughtTitle, exactAlarmTime)
     }
 
     fun cancelAlarm(context: Context, thoughtId: String) {
