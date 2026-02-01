@@ -40,12 +40,15 @@ fun WheelTimePickerDialog(
     onTimeSelected: (LocalDateTime) -> Unit
 ) {
     val view = LocalView.current
+    // 默认显示下一个整点（例如当前 2:42 → 默认 3:00）
     val currentTime = LocalDateTime.now()
-    var selectedYear by remember { mutableIntStateOf(currentTime.year) }
-    var selectedMonth by remember { mutableIntStateOf(currentTime.monthValue) }
-    var selectedDay by remember { mutableIntStateOf(currentTime.dayOfMonth) }
-    var selectedHour by remember { mutableIntStateOf(currentTime.hour) }
-    var selectedMinute by remember { mutableIntStateOf(currentTime.minute) }
+    val nextHourTime = currentTime.plusHours(1).withMinute(0).withSecond(0).withNano(0)
+
+    var selectedYear by remember { mutableIntStateOf(nextHourTime.year) }
+    var selectedMonth by remember { mutableIntStateOf(nextHourTime.monthValue) }
+    var selectedDay by remember { mutableIntStateOf(nextHourTime.dayOfMonth) }
+    var selectedHour by remember { mutableIntStateOf(nextHourTime.hour) }
+    var selectedMinute by remember { mutableIntStateOf(nextHourTime.minute) }
     var isDayAdjusting by remember { mutableStateOf(false) }
 
     // Calculate days in month (considering leap year)
