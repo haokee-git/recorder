@@ -1190,4 +1190,99 @@ notificationManager.notify(notificationId++, notification)
 
 ---
 
+### 2026-02-01 开发成果 - 通知点击自动定位功能
+
+完成了闹钟通知点击后的自动定位功能，提升用户从通知快速找到对应感言的体验。
+
+#### 需求背景
+用户点击闹钟通知打开应用后，希望能自动定位到对应的感言，而不是需要手动查找。
+
+#### 具体需求
+点击通知后，应用应该：
+1. 自动选择该感言（单选模式）
+2. 清除其他感言的选择状态
+3. 配合滚动动画定位到该感言位置
+4. 自动展开折叠区域（如果感言在折叠区域中）
+
+#### 技术实现
+
+**1. MainActivity 处理通知 Intent** ✅
+
+**新增方法**：
+```kotlin
+override fun onNewIntent(intent: android.content.Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    handleNotificationIntent(intent)
+}
+
+private fun handleNotificationIntent(intent: android.content.Intent?) {
+    intent?.getStringExtra("thought_id")?.let { thoughtId ->
+        viewModel.selectAndScrollToThought(thoughtId)
+    }
+}
+```
+
+**onCreate 集成**：
+```kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    // ... 初始化代码 ...
+
+    // Handle notification click (from alarm)
+    handleNotificationIntent(intent)
+
+    setContent { ... }
+}
+```
+
+**2. ThoughtListViewModel 新增方法** ✅
+
+```kotlin
+/**
+ * 选择并滚动到指定的感言（用于通知点击）
+ * 清除其他选择，只选择这一条感言
+ */
+fun selectAndScrollToThought(thoughtId: String) {
+    _uiState.update { state ->
+        state.copy(
+            selectedThoughts = setOf(thoughtId),
+            isMultiSelectMode = true,
+            scrollToThoughtId = thoughtId
+        )
+    }
+}
+```
+
+**3. 利用现有机制** ✅
+
+- 复用现有的 `scrollToThoughtId` 状态字段
+- 复用现有的 `clearScrollRequest()` 方法
+- 自动触发 ThoughtList.kt 中的展开折叠逻辑
+- 自动触发滚动动画定位
+
+#### 影响文件
+- ✅ MainActivity.kt: 添加 `handleNotificationIntent()` 和 `onNewIntent()`
+- ✅ ThoughtListViewModel.kt: 添加 `selectAndScrollToThought()` 方法
+
+#### 技术亮点
+- **Intent 处理**：正确处理应用未启动和已启动两种场景
+- **状态管理**：清除其他选择，只选择目标感言（单选模式）
+- **代码复用**：充分利用现有的滚动定位和展开逻辑
+- **无缝集成**：与现有的自动定位机制完美配合
+
+#### 效果
+- ✅ 点击通知后自动选择对应感言
+- ✅ 清除其他感言的选择状态（只选择一条）
+- ✅ 配合滚动动画定位到感言位置
+- ✅ 自动展开折叠区域（如果感言在折叠区域中）
+- ✅ 支持应用未启动和已启动两种情况
+
+#### 用户体验提升
+- **快速定位**：从通知直达对应感言，无需手动查找
+- **视觉反馈**：感言被自动选中，清晰标识目标
+- **流畅动画**：平滑滚动到目标位置，体验友好
+- **智能展开**：即使感言在折叠区域也能正确定位
+
+---
+
 *最后更新: 2026-02-01*

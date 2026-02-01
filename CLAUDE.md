@@ -752,3 +752,51 @@ val formattedTime = alarmTime.format(timeFormatter)
 - ✅ 设置闹钟后立即收到确认通知
 - ✅ 确认通知显示完整的设置信息（感言标题 + 时间）
 - ✅ 即使设备休眠也能正常响铃和振动
+
+---
+
+### 2026-02-01 - 通知点击自动定位功能
+
+#### 需求背景
+用户点击闹钟通知打开应用后，希望能自动定位到对应的感言，而不是需要手动查找。
+
+#### 具体需求
+点击通知后，应用应该：
+1. 自动选择该感言（单选模式）
+2. 清除其他感言的选择状态
+3. 配合滚动动画定位到该感言位置
+
+#### 技术实现
+
+**1. MainActivity 处理通知 Intent**
+- 在 `onCreate()` 中调用 `handleNotificationIntent(intent)`
+- 重写 `onNewIntent()` 处理应用已启动时的通知点击
+- 从 Intent 中提取 `thought_id` 并传递给 ViewModel
+
+**2. ViewModel 添加选择并滚动方法**
+```kotlin
+fun selectAndScrollToThought(thoughtId: String) {
+    _uiState.update { state ->
+        state.copy(
+            selectedThoughts = setOf(thoughtId),
+            isMultiSelectMode = true,
+            scrollToThoughtId = thoughtId
+        )
+    }
+}
+```
+
+**3. 利用现有滚动机制**
+- 复用现有的 `scrollToThoughtId` 和 `clearScrollRequest()` 机制
+- 自动触发展开折叠区域的逻辑（已在 ThoughtList.kt 中实现）
+
+#### 影响文件
+- MainActivity.kt: 添加 `handleNotificationIntent()` 和 `onNewIntent()`
+- ThoughtListViewModel.kt: 添加 `selectAndScrollToThought()` 方法
+
+#### 效果
+- ✅ 点击通知后自动选择对应感言
+- ✅ 清除其他感言的选择状态（只选择一条）
+- ✅ 配合滚动动画定位到感言位置
+- ✅ 自动展开折叠区域（如果感言在折叠区域中）
+- ✅ 支持应用未启动和已启动两种情况
