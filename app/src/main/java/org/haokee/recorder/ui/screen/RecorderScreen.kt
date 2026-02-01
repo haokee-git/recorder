@@ -104,7 +104,7 @@ fun RecorderScreen(
 
     // 监听应用恢复（从设置页面返回），检查权限并设置待处理的闹钟
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner, coroutineScope) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 // 应用恢复，检查是否有待设置的闹钟
@@ -135,7 +135,7 @@ fun RecorderScreen(
                         pendingAlarmTime = null
 
                         // 显示成功提示
-                        coroutineScope.launch {
+                        kotlinx.coroutines.MainScope().launch {
                             snackbarHostState.showSnackbar("闹钟设置成功")
                         }
                     }
