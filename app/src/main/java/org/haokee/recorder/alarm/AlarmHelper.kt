@@ -33,6 +33,14 @@ object AlarmHelper {
         val exactAlarmTime = alarmTime.withSecond(0).withNano(0)
         val triggerTime = exactAlarmTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
+        // 调试日志：打印设置的时间
+        android.util.Log.d("AlarmHelper", "========== 设置闹钟 ==========")
+        android.util.Log.d("AlarmHelper", "原始时间: $alarmTime")
+        android.util.Log.d("AlarmHelper", "调整后时间: $exactAlarmTime")
+        android.util.Log.d("AlarmHelper", "时间戳: $triggerTime")
+        android.util.Log.d("AlarmHelper", "当前时间: ${LocalDateTime.now()}")
+        android.util.Log.d("AlarmHelper", "================================")
+
         // Check if we can schedule exact alarms on Android 12+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {

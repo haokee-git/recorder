@@ -24,6 +24,14 @@ class AlarmReceiver : BroadcastReceiver() {
         val thoughtId = intent.getStringExtra("thought_id") ?: return
         val thoughtTitle = intent.getStringExtra("thought_title") ?: "感言提醒"
 
+        // 调试日志：打印闹钟响的时间
+        val currentTime = java.time.LocalDateTime.now()
+        android.util.Log.d("AlarmReceiver", "========== 闹钟触发 ==========")
+        android.util.Log.d("AlarmReceiver", "触发时间: $currentTime")
+        android.util.Log.d("AlarmReceiver", "感言ID: $thoughtId")
+        android.util.Log.d("AlarmReceiver", "感言标题: $thoughtTitle")
+        android.util.Log.d("AlarmReceiver", "================================")
+
         // 直接播放铃声和振动
         playAlarmSound(context)
         triggerVibration(context)
