@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import org.haokee.recorder.MainActivity
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -42,7 +43,7 @@ object AlarmHelper {
         android.util.Log.d("AlarmHelper", "================================")
 
         // 使用 setAlarmClock() 确保精确触发（即使在 Doze 模式下）
-        val showIntent = Intent(context, org.haokee.recorder.MainActivity::class.java)
+        val showIntent = Intent(context, MainActivity::class.java)
         val showPendingIntent = PendingIntent.getActivity(
             context,
             0,
