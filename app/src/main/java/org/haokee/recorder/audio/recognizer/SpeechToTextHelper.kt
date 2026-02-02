@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.haokee.recorder.audio.whisper.WhisperHelper
 import org.haokee.recorder.data.model.Thought
+import org.haokee.recorder.data.repository.SettingsRepository
+import org.haokee.recorder.llm.LLMClient
 import org.haokee.recorder.util.ChineseConverter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -16,9 +18,12 @@ import java.time.format.DateTimeFormatter
  * This helper manages the lifecycle of WhisperHelper and provides
  * a simple API for converting audio thoughts to text.
  *
- * Phase 3 implementation: Real offline speech recognition using Whisper tiny model
+ * Phase 4 implementation: Integrated with LLM for title generation
  */
-class SpeechToTextHelper(private val context: Context) {
+class SpeechToTextHelper(
+    private val context: Context,
+    private val settingsRepository: SettingsRepository? = null
+) {
 
     companion object {
         private const val TAG = "SpeechToTextHelper"
@@ -26,9 +31,9 @@ class SpeechToTextHelper(private val context: Context) {
         @Volatile
         private var instance: SpeechToTextHelper? = null
 
-        fun getInstance(context: Context): SpeechToTextHelper {
+        fun getInstance(context: Context, settingsRepository: SettingsRepository? = null): SpeechToTextHelper {
             return instance ?: synchronized(this) {
-                instance ?: SpeechToTextHelper(context.applicationContext).also { instance = it }
+                instance ?: SpeechToTextHelper(context.applicationContext, settingsRepository).also { instance = it }
             }
         }
     }
@@ -94,9 +99,8 @@ class SpeechToTextHelper(private val context: Context) {
                 val transcribedText = ChineseConverter.toSimplified(rawText)
                 Log.d(TAG, "Transcription successful (after conversion): $transcribedText")
 
-                // Use transcribed text as both title and content
-                // In Phase 4, we can use LLM to generate a better title
-                val title = generateTitleFromText(transcribedText)
+                // Generate title using LLM if available, otherwise use simple extraction
+                val title = generateTitle(transcribedText)
                 val content = transcribedText
 
                 thought.copy(
@@ -116,8 +120,45 @@ class SpeechToTextHelper(private val context: Context) {
     }
 
     /**
-     * Generate a title from transcribed text
-     * Takes first 20 characters or first sentence
+     * Generate a title using LLM if available, otherwise use simple extraction
+     */
+    private suspend fun generateTitle(text: String): String {
+        // Check if LLM is enabled and configured
+        if (settingsRepository != null &&
+            settingsRepository.getLLMEnabled() &&
+            settingsRepository.isLLMConfigured()
+        ) {
+            try {
+                Log.d(TAG, "Generating title using LLM...")
+                val llmClient = LLMClient.create(
+                    baseUrl = settingsRepository.getLLMBaseUrl(),
+                    apiKey = settingsRepository.getLLMApiKey(),
+                    model = settingsRepository.getLLMModel()
+                )
+
+                val result = llmClient.generateTitle(text)
+
+                if (result.isSuccess) {
+                    val generatedTitle = result.getOrNull() ?: ""
+                    if (generatedTitle.isNotBlank()) {
+                        Log.d(TAG, "LLM generated title: $generatedTitle")
+                        return generatedTitle
+                    }
+                }
+
+                Log.w(TAG, "LLM title generation failed, using fallback")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error generating title with LLM", e)
+            }
+        }
+
+        // Fallback to simple extraction
+        return generateTitleFromText(text)
+    }
+
+    /**
+     * Generate a title from transcribed text using simple extraction
+     * Takes first 30 characters or first sentence
      */
     private fun generateTitleFromText(text: String): String {
         val maxLength = 30

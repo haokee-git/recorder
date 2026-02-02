@@ -13,6 +13,7 @@ import org.haokee.recorder.audio.recognizer.SpeechToTextHelper
 import org.haokee.recorder.audio.recorder.AudioRecorder
 import org.haokee.recorder.data.model.Thought
 import org.haokee.recorder.data.model.ThoughtColor
+import org.haokee.recorder.data.repository.SettingsRepository
 import org.haokee.recorder.data.repository.ThoughtRepository
 import java.time.LocalDateTime
 import java.util.UUID
@@ -32,6 +33,7 @@ data class ThoughtListUiState(
 class ThoughtListViewModel(
     private val context: Context,
     private val repository: ThoughtRepository,
+    private val settingsRepository: SettingsRepository,
     val audioRecorder: AudioRecorder,
     val audioPlayer: AudioPlayer
 ) : ViewModel() {
@@ -39,7 +41,7 @@ class ThoughtListViewModel(
     private val _uiState = MutableStateFlow(ThoughtListUiState())
     val uiState: StateFlow<ThoughtListUiState> = _uiState.asStateFlow()
 
-    private val speechToTextHelper = SpeechToTextHelper.getInstance(context)
+    private val speechToTextHelper = SpeechToTextHelper.getInstance(context, settingsRepository)
 
     init {
         loadThoughts()

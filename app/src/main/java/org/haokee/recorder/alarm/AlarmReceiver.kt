@@ -16,8 +16,12 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.haokee.recorder.MainActivity
 import org.haokee.recorder.R
+import org.haokee.recorder.data.local.ThoughtDatabase
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -32,81 +36,64 @@ class AlarmReceiver : BroadcastReceiver() {
         android.util.Log.d("AlarmReceiver", "感言标题: $thoughtTitle")
         android.util.Log.d("AlarmReceiver", "================================")
 
-        // 直接播放铃声和振动
-        playAlarmSound(context)
-        triggerVibration(context)
-
-        // 显示通知
-        showNotification(context, thoughtTitle, thoughtId)
+        // Launch AlarmActivity with full-screen intent
+        launchAlarmActivity(context, thoughtId, thoughtTitle)
     }
 
-    private fun playAlarmSound(context: Context) {
-        try {
-            // 获取系统闹钟铃声
-            val alarmUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+    private fun launchAlarmActivity(context: Context, thoughtId: String, thoughtTitle: String) {
+        // Get thought details from database
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val database = ThoughtDatabase.getDatabase(context)
+                val thought = database.thoughtDao().getThoughtById(thoughtId)
 
-            // 创建 Ringtone 对象并播放
-            val ringtone: Ringtone = RingtoneManager.getRingtone(context, alarmUri)
+                val content = thought?.content ?: ""
 
-            // 设置为闹钟音频流
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ringtone.audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            } else {
-                @Suppress("DEPRECATION")
-                ringtone.streamType = AudioManager.STREAM_ALARM
-            }
-
-            // 播放铃声（会持续播放直到手动停止）
-            ringtone.play()
-
-            // 10秒后自动停止（防止一直响）
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                if (ringtone.isPlaying) {
-                    ringtone.stop()
+                // Create full-screen intent for AlarmActivity
+                val alarmIntent = Intent(context, AlarmActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    putExtra("thought_id", thoughtId)
+                    putExtra("thought_title", thoughtTitle)
+                    putExtra("thought_content", content)
                 }
-            }, 10000)
 
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun triggerVibration(context: Context) {
-        try {
-            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vibratorManager.defaultVibrator
-            } else {
-                @Suppress("DEPRECATION")
-                context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            }
-
-            // 振动模式：[等待, 振动, 等待, 振动, ...]
-            val pattern = longArrayOf(0, 500, 200, 500, 200, 500, 200, 500, 200, 500)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(
-                    VibrationEffect.createWaveform(pattern, -1) // -1 表示不重复
+                val fullScreenPendingIntent = PendingIntent.getActivity(
+                    context,
+                    thoughtId.hashCode(),
+                    alarmIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(pattern, -1)
+
+                // Show notification with full-screen intent
+                showNotification(context, thoughtTitle, thoughtId, fullScreenPendingIntent)
+
+                // For devices that support it, directly start the activity
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // On Android 10+, full-screen intent might not work if user disabled it
+                    // So we also try to start the activity directly
+                    try {
+                        context.startActivity(alarmIntent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
-    private fun showNotification(context: Context, title: String, thoughtId: String) {
+    private fun showNotification(
+        context: Context,
+        title: String,
+        thoughtId: String,
+        fullScreenPendingIntent: PendingIntent
+    ) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // 使用新的 CHANNEL_ID（解决渠道不更新的问题）
-        val channelId = "thought_alarm_channel_v2"
+        // 使用新的 CHANNEL_ID
+        val channelId = "thought_alarm_channel_v3"
 
         // Get default alarm sound
         val alarmSound: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -133,20 +120,7 @@ class AlarmReceiver : BroadcastReceiver() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Create intent to open app
-        val mainIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("thought_id", thoughtId)
-        }
-
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            thoughtId.hashCode(),
-            mainIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Build notification
+        // Build notification with full-screen intent
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
@@ -154,9 +128,9 @@ class AlarmReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setFullScreenIntent(pendingIntent, true)
-            .setOngoing(false) // 允许用户滑动关闭通知（因为铃声会自动停止）
+            .setContentIntent(fullScreenPendingIntent)
+            .setFullScreenIntent(fullScreenPendingIntent, true) // 全屏意图
+            .setOngoing(true) // 设置为 ongoing，不能轻易关闭
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
 
@@ -164,6 +138,6 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "thought_alarm_channel_v2"
+        private const val CHANNEL_ID = "thought_alarm_channel_v3"
     }
 }

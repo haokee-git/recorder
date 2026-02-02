@@ -4,20 +4,35 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize  
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import org.haokee.recorder.audio.player.AudioPlayer
 import org.haokee.recorder.audio.recorder.AudioRecorder
 import org.haokee.recorder.data.local.ThoughtDatabase
+import org.haokee.recorder.data.repository.SettingsRepository
 import org.haokee.recorder.data.repository.ThoughtRepository
 import org.haokee.recorder.ui.screen.RecorderScreen
+import org.haokee.recorder.ui.screen.SettingsScreen
 import org.haokee.recorder.ui.theme.RecorderTheme
+import org.haokee.recorder.ui.viewmodel.ChatViewModel
+import org.haokee.recorder.ui.viewmodel.SettingsViewModel
 import org.haokee.recorder.ui.viewmodel.ThoughtListViewModel
 import org.haokee.recorder.ui.viewmodel.ThoughtViewModelFactory
 
 class MainActivity : ComponentActivity() {
-    private lateinit var viewModel: ThoughtListViewModel
+    private lateinit var thoughtViewModel: ThoughtListViewModel
+    private lateinit var settingsViewModel: SettingsViewModel
+    private lateinit var chatViewModel: ChatViewModel
+    private var currentScreen by mutableStateOf(Screen.RECORDER)
+
+    enum class Screen {
+        RECORDER,
+        SETTINGS
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,23 +40,36 @@ class MainActivity : ComponentActivity() {
 
         // Initialize dependencies
         val database = ThoughtDatabase.getDatabase(applicationContext)
-        val repository = ThoughtRepository(database.thoughtDao(), applicationContext)
+        val thoughtRepository = ThoughtRepository(database.thoughtDao(), applicationContext)
+        val settingsRepository = SettingsRepository(applicationContext)
         val audioRecorder = AudioRecorder()
         val audioPlayer = AudioPlayer()
 
-        // Create ViewModel
-        val factory = ThoughtViewModelFactory(applicationContext, repository, audioRecorder, audioPlayer)
-        viewModel = ViewModelProvider(this, factory)[ThoughtListViewModel::class.java]
+        // Create ViewModels
+        val thoughtFactory = ThoughtViewModelFactory(applicationContext, thoughtRepository, settingsRepository, audioRecorder, audioPlayer)
+        thoughtViewModel = ViewModelProvider(this, thoughtFactory)[ThoughtListViewModel::class.java]
+
+        settingsViewModel = SettingsViewModel(settingsRepository, thoughtRepository)
+        chatViewModel = ChatViewModel(settingsRepository)
 
         // Handle notification click (from alarm)
         handleNotificationIntent(intent)
 
         setContent {
-            RecorderTheme {
-                RecorderScreen(
-                    viewModel = viewModel,
-                    modifier = Modifier.fillMaxSize()
-                )
+            RecorderTheme(darkTheme = settingsViewModel.uiState.value.isDarkTheme) {
+                when (currentScreen) {
+                    Screen.RECORDER -> RecorderScreen(
+                        viewModel = thoughtViewModel,
+                        chatViewModel = chatViewModel,
+                        onSettingsClick = { currentScreen = Screen.SETTINGS },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Screen.SETTINGS -> SettingsScreen(
+                        viewModel = settingsViewModel,
+                        onNavigateBack = { currentScreen = Screen.RECORDER },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
     }
@@ -54,13 +82,13 @@ class MainActivity : ComponentActivity() {
 
     private fun handleNotificationIntent(intent: android.content.Intent?) {
         intent?.getStringExtra("thought_id")?.let { thoughtId ->
-            viewModel.selectAndScrollToThought(thoughtId)
+            thoughtViewModel.selectAndScrollToThought(thoughtId)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.audioRecorder.release()
-        viewModel.audioPlayer.release()
+        thoughtViewModel.audioRecorder.release()
+        thoughtViewModel.audioPlayer.release()
     }
 }

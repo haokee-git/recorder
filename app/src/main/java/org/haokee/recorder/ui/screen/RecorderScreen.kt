@@ -33,12 +33,15 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import org.haokee.recorder.ui.component.*
+import org.haokee.recorder.ui.viewmodel.ChatViewModel
 import org.haokee.recorder.ui.viewmodel.ThoughtListViewModel
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun RecorderScreen(
     viewModel: ThoughtListViewModel,
+    chatViewModel: ChatViewModel,
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
@@ -48,6 +51,7 @@ fun RecorderScreen(
     val recordingState by viewModel.audioRecorder.recordingState.collectAsState()
     val playbackState by viewModel.audioPlayer.playbackState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     // Edit dialog state
     var editingThought by remember { mutableStateOf<org.haokee.recorder.data.model.Thought?>(null) }
@@ -149,21 +153,30 @@ fun RecorderScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                RecorderTopBar(
-                    onChatClick = {
-                        // TODO: Phase 3 - Open chat dialog
-                    },
-                    onSettingsClick = {
-                        // TODO: Phase 4 - Open settings screen
-                    }
-                )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { paddingValues ->
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                ChatDrawer(viewModel = chatViewModel)
+            }
+        },
+        modifier = modifier
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                topBar = {
+                    RecorderTopBar(
+                        onChatClick = {
+                            coroutineScope.launch {
+                                drawerState.open()
+                            }
+                        },
+                        onSettingsClick = onSettingsClick
+                    )
+                },
+                snackbarHost = { SnackbarHost(snackbarHostState) }
+            ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -380,6 +393,7 @@ fun RecorderScreen(
                     .align(Alignment.BottomCenter)
             )
         }
+    }
     }
 
     // Edit thought dialog
