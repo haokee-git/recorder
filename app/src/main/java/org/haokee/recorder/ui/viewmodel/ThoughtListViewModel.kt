@@ -44,10 +44,17 @@ class ThoughtListViewModel(
     private val speechToTextHelper = SpeechToTextHelper.getInstance(context, settingsRepository)
 
     init {
-        loadThoughts()
-        startPlaybackProgressUpdater()
-        initializeWhisper()
-        startMinutelyRefresh()
+        android.util.Log.d("ThoughtListViewModel", "Initializing ViewModel...")
+        try {
+            loadThoughts()
+            startPlaybackProgressUpdater()
+            initializeWhisper()
+            startMinutelyRefresh()
+            android.util.Log.d("ThoughtListViewModel", "ViewModel initialized successfully")
+        } catch (e: Exception) {
+            android.util.Log.e("ThoughtListViewModel", "Error during initialization", e)
+            _uiState.update { it.copy(error = "初始化失败: ${e.message}") }
+        }
     }
 
     private fun startMinutelyRefresh() {

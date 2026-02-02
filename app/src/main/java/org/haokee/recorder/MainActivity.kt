@@ -38,22 +38,33 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize dependencies
-        val database = ThoughtDatabase.getDatabase(applicationContext)
-        val thoughtRepository = ThoughtRepository(database.thoughtDao(), applicationContext)
-        val settingsRepository = SettingsRepository(applicationContext)
-        val audioRecorder = AudioRecorder()
-        val audioPlayer = AudioPlayer()
+        android.util.Log.d("MainActivity", "onCreate started")
 
-        // Create ViewModels
-        val thoughtFactory = ThoughtViewModelFactory(applicationContext, thoughtRepository, settingsRepository, audioRecorder, audioPlayer)
-        thoughtViewModel = ViewModelProvider(this, thoughtFactory)[ThoughtListViewModel::class.java]
+        try {
+            // Initialize dependencies
+            android.util.Log.d("MainActivity", "Initializing database...")
+            val database = ThoughtDatabase.getDatabase(applicationContext)
+            val thoughtRepository = ThoughtRepository(database.thoughtDao(), applicationContext)
+            val settingsRepository = SettingsRepository(applicationContext)
+            val audioRecorder = AudioRecorder()
+            val audioPlayer = AudioPlayer()
 
-        settingsViewModel = SettingsViewModel(settingsRepository, thoughtRepository)
-        chatViewModel = ChatViewModel(settingsRepository)
+            // Create ViewModels
+            android.util.Log.d("MainActivity", "Creating ViewModels...")
+            val thoughtFactory = ThoughtViewModelFactory(applicationContext, thoughtRepository, settingsRepository, audioRecorder, audioPlayer)
+            thoughtViewModel = ViewModelProvider(this, thoughtFactory)[ThoughtListViewModel::class.java]
 
-        // Handle notification click (from alarm)
-        handleNotificationIntent(intent)
+            settingsViewModel = SettingsViewModel(settingsRepository, thoughtRepository)
+            chatViewModel = ChatViewModel(settingsRepository)
+
+            android.util.Log.d("MainActivity", "ViewModels created successfully")
+
+            // Handle notification click (from alarm)
+            handleNotificationIntent(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error in onCreate", e)
+            throw e
+        }
 
         setContent {
             RecorderTheme(darkTheme = settingsViewModel.uiState.value.isDarkTheme) {
