@@ -8,6 +8,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -303,8 +304,4 @@ class AlarmActivity : ComponentActivity() {
         super.onDestroy()
         stopAudio()
     }
-
-    // Fix: add missing import
-    private val lifecycleScope: kotlinx.coroutines.CoroutineScope
-        get() = androidx.lifecycle.lifecycleScope
 }

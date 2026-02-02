@@ -93,7 +93,6 @@ dependencies {
 
     // Markdown rendering for chat interface
     implementation("io.noties.markwon:core:4.6.2")
-    implementation("io.noties.markwon:syntax-highlight:4.6.2")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
