@@ -52,18 +52,23 @@ class ThoughtListViewModel(
 
     private fun startMinutelyRefresh() {
         viewModelScope.launch {
-            while (true) {
-                // 计算到下一个整分钟还有多少毫秒
-                val now = LocalDateTime.now()
-                val secondsUntilNextMinute = 60 - now.second
-                val nanosUntilNextMinute = 1_000_000_000 - now.nano
-                val millisUntilNextMinute = secondsUntilNextMinute * 1000L + nanosUntilNextMinute / 1_000_000
+            try {
+                while (true) {
+                    // 计算到下一个整分钟还有多少毫秒
+                    val now = LocalDateTime.now()
+                    val secondsUntilNextMinute = 60 - now.second
+                    val nanosUntilNextMinute = 1_000_000_000 - now.nano
+                    val millisUntilNextMinute = secondsUntilNextMinute * 1000L + nanosUntilNextMinute / 1_000_000
 
-                // 等待到下一个整分钟的第0秒
-                delay(millisUntilNextMinute)
+                    // 等待到下一个整分钟的第0秒
+                    delay(millisUntilNextMinute)
 
-                // 刷新列表（闹钟过期的感言会自动移到"已过期"区域）
-                loadThoughts()
+                    // 刷新列表（闹钟过期的感言会自动移到"已过期"区域）
+                    loadThoughts()
+                }
+            } catch (e: Exception) {
+                // Catch any exceptions to prevent crash
+                android.util.Log.e("ThoughtListViewModel", "Error in minutely refresh", e)
             }
         }
     }
@@ -80,14 +85,19 @@ class ThoughtListViewModel(
 
     private fun startPlaybackProgressUpdater() {
         viewModelScope.launch {
-            audioPlayer.playbackState.collect { playbackState ->
-                if (playbackState.isPlaying) {
-                    // Update progress every 100ms while playing
-                    while (playbackState.isPlaying) {
-                        delay(100)
-                        audioPlayer.updateProgress()
+            try {
+                audioPlayer.playbackState.collect { playbackState ->
+                    if (playbackState.isPlaying) {
+                        // Update progress every 100ms while playing
+                        while (audioPlayer.playbackState.value.isPlaying) {
+                            delay(100)
+                            audioPlayer.updateProgress()
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                // Catch any exceptions to prevent crash
+                android.util.Log.e("ThoughtListViewModel", "Error in playback progress updater", e)
             }
         }
     }

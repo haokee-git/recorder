@@ -16,7 +16,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:k2-fsa.github.io)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(echo:*)"
     ]
   },
   "outputStyle": "default"
