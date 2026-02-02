@@ -1482,4 +1482,116 @@ org/haokee/recorder/
 
 ---
 
+### 2026-02-02 Bug 修复 - 应用崩溃问题排查与解决
+
+完成了一系列关键 Bug 修复，解决了应用启动崩溃的问题。
+
+#### 问题现象
+- 用户反馈：应用启动后无操作，短时间内就闪退
+- 日志显示：`PROCESS ENDED (25814) for package org.haokee.recorder`
+- 特征：不是 FATAL EXCEPTION，而是进程被系统终止
+
+#### 排查过程
+
+**第一步：编译错误修复** ✅
+- **AlarmActivity.kt** - 修复 lifecycleScope 导入问题
+  - 错误：手动定义了 lifecycleScope 属性
+  - 修复：添加正确的 import `androidx.lifecycle.lifecycleScope`
+
+- **MarkdownText.kt** - 简化 Markdown 渲染
+  - 问题：SyntaxHighlightPlugin 参数不匹配，需要复杂的 Prism4j 配置
+  - 解决：移除代码高亮功能，使用基本的 Markdown 渲染
+  - 移除依赖：`io.noties.markwon:syntax-highlight:4.6.2`
+
+**第二步：协程问题修复** ✅
+- **ThoughtListViewModel.kt** - 修复无限循环
+  - 问题：`startPlaybackProgressUpdater()` 中闭包捕获了旧的 `playbackState` 值
+  - 修复：改为使用 `audioPlayer.playbackState.value.isPlaying` 实时获取状态
+  ```kotlin
+  // 修改前（错误）：
+  while (playbackState.isPlaying) { ... }
+
+  // 修改后（正确）：
+  while (audioPlayer.playbackState.value.isPlaying) { ... }
+  ```
+
+- **添加错误捕获** - 防止协程崩溃
+  ```kotlin
+  viewModelScope.launch {
+      try {
+          // 协程逻辑
+      } catch (e: Exception) {
+          android.util.Log.e("ThoughtListViewModel", "Error in ...", e)
+      }
+  }
+  ```
+
+**第三步：添加诊断日志** ✅
+- **MainActivity.kt** - onCreate 添加日志
+  ```kotlin
+  android.util.Log.d("MainActivity", "onCreate started")
+  android.util.Log.d("MainActivity", "Initializing database...")
+  android.util.Log.d("MainActivity", "Creating ViewModels...")
+  android.util.Log.d("MainActivity", "ViewModels created successfully")
+  ```
+
+- **ThoughtListViewModel.kt** - init 添加日志
+  ```kotlin
+  android.util.Log.d("ThoughtListViewModel", "Initializing ViewModel...")
+  android.util.Log.d("ThoughtListViewModel", "ViewModel initialized successfully")
+  ```
+
+#### 根本原因：Git LFS 模型文件问题 ✅
+
+**发现问题**：
+- 检查模型文件大小，发现只有 133-134 字节（应该是 ~150MB）
+- 这些是 Git LFS 的指针文件，不是真实的模型文件
+- Whisper 初始化时尝试加载指针文件作为模型，导致内存问题和进程终止
+
+**解决方案**：
+```bash
+# 1. 初始化 Git LFS
+git lfs install
+
+# 2. 下载真实的模型文件
+git lfs fetch --all && git lfs checkout
+```
+
+**结果验证**：
+```
+app/src/main/assets/sherpa-onnx-whisper-base/base-decoder.int8.onnx: 125MB
+app/src/main/assets/sherpa-onnx-whisper-base/base-encoder.int8.onnx: 28MB
+```
+
+#### 技术要点
+- **Git LFS 使用**：大文件存储必须正确配置 Git LFS
+- **指针文件识别**：文件大小异常小（< 1KB）是 LFS 指针的明显特征
+- **协程状态管理**：避免闭包捕获旧状态，使用实时状态查询
+- **错误处理**：协程中必须添加 try-catch，防止未捕获异常导致崩溃
+- **诊断日志**：关键初始化步骤添加日志，便于排查问题
+
+#### 影响文件
+- ✅ AlarmActivity.kt: lifecycleScope 导入修复
+- ✅ MarkdownText.kt: 简化 Markdown 渲染
+- ✅ ThoughtListViewModel.kt: 协程修复 + 日志 + 错误捕获
+- ✅ MainActivity.kt: 诊断日志 + 错误捕获
+- ✅ build.gradle.kts: 移除 syntax-highlight 依赖
+- ✅ 模型文件: 通过 Git LFS 正确下载（125MB + 28MB）
+
+#### 效果
+- ✅ 应用启动不再崩溃
+- ✅ Whisper 模型正确加载
+- ✅ 语音识别功能正常工作
+- ✅ 协程状态管理正确
+- ✅ 完善的错误处理和日志
+
+#### 经验教训
+1. **大文件管理**：项目中的大文件（如模型文件）必须使用 Git LFS，并确保所有开发者正确配置
+2. **文件验证**：克隆项目后应该验证大文件的实际大小，确保不是 LFS 指针
+3. **错误处理**：所有协程都应该有 try-catch，避免未捕获异常导致进程终止
+4. **协程状态**：避免在循环中使用闭包捕获的状态，应使用实时状态查询
+5. **诊断能力**：关键初始化步骤添加日志，便于快速定位问题
+
+---
+
 *最后更新: 2026-02-02*
