@@ -1285,4 +1285,201 @@ fun selectAndScrollToThought(thoughtId: String) {
 
 ---
 
-*最后更新: 2026-02-01*
+### 2026-02-02 开发成果 - 完成剩余核心功能
+
+完成了项目的所有剩余核心功能，包括全屏闹钟界面、设置页面和大模型集成，项目进入可发布状态。
+
+#### 1. 全屏闹钟界面 ✅
+
+**需求**：提醒触发时显示全屏界面，确保用户不会错过重要提醒。
+
+**新增文件**：
+1. **AlarmActivity.kt** (300+ 行)
+   - 全屏闹钟 Activity，支持锁屏显示
+   - 设置窗口标志：FLAG_SHOW_WHEN_LOCKED, FLAG_TURN_SCREEN_ON, FLAG_KEEP_SCREEN_ON
+   - 自动播放感言音频（循环播放）
+   - 显示感言标题、内容、播放进度条
+   - 两个操作按钮："关闭"（停止播放并关闭）和"查看详情"（跳转主界面定位）
+   - 禁用返回键，强制用户通过按钮操作
+   - 使用 Jetpack Compose 实现 UI
+
+**修改文件**：
+2. **AlarmReceiver.kt** - 启动全屏 Activity
+   - 改为启动 AlarmActivity 而不是直接显示通知
+   - 使用 Full Screen Intent 实现锁屏唤醒
+   - 从数据库异步获取感言详情（title, content）
+   - 传递数据到 AlarmActivity
+   - Android 10+ 兼容性处理（直接启动 Activity）
+
+3. **AndroidManifest.xml** - 添加 Activity 声明
+   - 配置 AlarmActivity：showWhenLocked, turnScreenOn
+   - launchMode: singleInstance（独立任务栈）
+   - excludeFromRecents: true（不在最近任务中显示）
+
+**技术实现**：
+- 窗口管理：`setShowWhenLocked()`, `setTurnScreenOn()`
+- 音频播放：MediaPlayer 循环播放，onDestroy 时释放
+- 禁用返回键：`BackHandler(enabled = true) { /* 不操作 */ }`
+- Intent 数据传递：thought_id, thought_title, thought_content
+- 从 Repository 获取完整感言数据
+
+**效果**：
+- ✅ 闹钟触发时自动唤醒屏幕并全屏显示
+- ✅ 锁屏状态也能正常显示和播放
+- ✅ 用户必须主动操作才能关闭
+- ✅ 可快速跳转到主界面查看详情
+- ✅ 音频循环播放，提供强提醒效果
+
+#### 2. 设置页面集成 ✅
+
+**已存在文件（完全可用）**：
+- SettingsRepository.kt - 设置数据管理（已完善）
+- SettingsViewModel.kt - 状态管理（已完善）
+- SettingsScreen.kt - UI 界面（已完善）
+
+**集成工作**：
+- **MainActivity.kt** - 添加导航机制
+  - 使用 mutableStateOf 管理当前屏幕状态（RECORDER / SETTINGS）
+  - 创建 SettingsViewModel 实例
+  - 条件渲染 RecorderScreen 或 SettingsScreen
+  - 根据设置动态切换主题：`RecorderTheme(darkTheme = settingsViewModel.uiState.value.isDarkTheme)`
+
+- **RecorderScreen.kt** - 添加导航参数
+  - 添加 `onSettingsClick` 回调参数
+  - 传递给 RecorderTopBar
+
+**功能特性**：
+- ✅ 大模型 API 设置（启用/禁用、Base URL、API Key、模型名称、测试连接）
+- ✅ 主题切换（亮色/暗色模式）
+- ✅ 数据管理（清除所有感言，带二次确认对话框）
+- ✅ 关于页面（显示版本号）
+- ✅ API Key 加密存储（EncryptedSharedPreferences）
+- ✅ 响应式主题切换（立即生效）
+
+#### 3. 大模型集成（完整实现）✅
+
+**API 客户端层**：
+1. **LLMApiService.kt** (60 行)
+   - OpenAI 兼容 API 接口定义（Retrofit）
+   - ChatCompletionRequest/Response 数据类
+   - Message 数据类（role + content）
+
+2. **LLMClient.kt** (150 行)
+   - LLM API 封装，自动添加 Authorization header
+   - `chat()`: 单轮对话
+   - `chatWithHistory()`: 多轮对话（传递历史消息）
+   - `generateTitle()`: 标题生成（专用 system prompt）
+   - 错误处理和日志
+   - 超时配置：连接 30s，读写 60s
+
+**对话功能**：
+3. **ChatViewModel.kt** (140 行)
+   - 对话状态管理（messages, inputText, isLoading, error）
+   - `sendMessage()`: 发送消息并调用 LLM
+   - `clearContext()`: 插入分割线消息
+   - `clearMessages()`: 清空所有消息
+   - 检查 LLM 启用和配置状态
+   - 错误处理和提示
+
+4. **ChatDrawer.kt** (220 行)
+   - 左侧抽屉式对话界面
+   - **用户消息气泡**：蓝色背景，右对齐，圆角（16, 16, 4, 16）
+   - **AI 消息气泡**：灰色背景，左对齐，圆角（16, 16, 16, 4），Markdown 渲染
+   - **系统消息**：分割线样式（"--- 上下文已清除 ---"）
+   - 输入框和发送按钮
+   - 清除上下文按钮（顶部）
+   - 状态提示（未启用/未配置）
+   - 自动滚动到最新消息（LaunchedEffect）
+   - 加载指示器（CircularProgressIndicator）
+
+5. **MarkdownText.kt** (50 行)
+   - Compose 封装的 Markdown 渲染组件
+   - 使用 Markwon 库（AndroidView 集成）
+   - 支持代码高亮（Prism4j）
+   - 正确处理 Compose Color 到 Android Color 转换
+
+**集成到主界面**：
+- **RecorderScreen.kt**
+  - 使用 `ModalNavigationDrawer` 包裹整个界面
+  - 添加 `drawerState` 和 `chatViewModel` 参数
+  - 点击对话按钮打开抽屉：`drawerState.open()`
+  - 抽屉内容：`ChatDrawer(viewModel = chatViewModel)`
+
+- **MainActivity.kt**
+  - 创建 `chatViewModel` 实例
+  - 传递 `settingsRepository` 到 `ChatViewModel`
+  - 传递 `chatViewModel` 到 `RecorderScreen`
+
+**标题生成功能**：
+- **SpeechToTextHelper.kt**
+  - 添加 `settingsRepository` 依赖
+  - 新增 `generateTitle()` 方法：
+    - 检查 LLM 是否启用且配置
+    - 如果可用，调用 `LLMClient.generateTitle()`
+    - LLM 失败时降级为 `generateTitleFromText()`（前 30 字或首句）
+  - 在 `convertThought()` 中调用标题生成
+
+- **ThoughtListViewModel.kt**
+  - 添加 `settingsRepository` 参数
+  - 传递给 `SpeechToTextHelper.getInstance()`
+
+- **ThoughtViewModelFactory.kt**
+  - 添加 `settingsRepository` 参数
+  - 传递给 `ThoughtListViewModel`
+
+- **MainActivity.kt**
+  - 传递 `settingsRepository` 到 `ThoughtViewModelFactory`
+
+**技术特点**：
+- ✅ OpenAI 兼容 API（支持自定义 Base URL）
+- ✅ 单轮对话（每次发送独立请求，不保留历史上下文）
+- ✅ Markdown 渲染（支持代码高亮）
+- ✅ 智能标题生成（LLM 优先，降级到简单提取）
+- ✅ 抽屉式 UI（Material 3 ModalNavigationDrawer）
+- ✅ 响应式状态管理（StateFlow）
+- ✅ 完善的错误处理和加载状态
+- ✅ 安全存储（EncryptedSharedPreferences 加密 API Key）
+
+#### 技术架构总结
+
+**新增模块**：
+```
+org/haokee/recorder/
+├── alarm/
+│   └── AlarmActivity.kt         (全屏闹钟界面)
+├── llm/                          (大模型 API 客户端)
+│   ├── LLMApiService.kt         (Retrofit 接口)
+│   └── LLMClient.kt             (API 封装)
+├── ui/
+│   ├── component/
+│   │   ├── ChatDrawer.kt        (对话抽屉)
+│   │   └── MarkdownText.kt      (Markdown 渲染)
+│   └── viewmodel/
+│       └── ChatViewModel.kt      (对话状态管理)
+```
+
+**修改模块**：
+- MainActivity.kt - 导航、主题、ViewModels
+- RecorderScreen.kt - 抽屉集成
+- SpeechToTextHelper.kt - 标题生成
+- ThoughtListViewModel.kt - settingsRepository
+- ThoughtViewModelFactory.kt - settingsRepository
+- AlarmReceiver.kt - 启动 AlarmActivity
+- AndroidManifest.xml - AlarmActivity 声明
+
+#### 影响文件总结
+- ✅ 新建 6 个文件（AlarmActivity, LLM 相关 5 个）
+- ✅ 修改 8 个文件（MainActivity, RecorderScreen, ViewModel 相关等）
+- ✅ 所有依赖已配置（build.gradle.kts）
+
+#### 效果验证
+- ✅ 全屏闹钟：锁屏唤醒、音频播放、强制交互
+- ✅ 设置页面：API 配置、主题切换、数据管理
+- ✅ 对话功能：发送消息、AI 回复、Markdown 渲染
+- ✅ 标题生成：LLM 优先、降级处理
+- ✅ 主题切换：响应式更新
+- ✅ 安全存储：API Key 加密
+
+---
+
+*最后更新: 2026-02-02*
