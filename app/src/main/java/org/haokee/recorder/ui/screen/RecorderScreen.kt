@@ -156,9 +156,7 @@ fun RecorderScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
-                ChatDrawer(viewModel = chatViewModel)
-            }
+            ChatDrawer(viewModel = chatViewModel)
         },
         modifier = modifier
     ) {

@@ -272,6 +272,62 @@
 
 ## 需求变更记录
 
+### 2026-02-10 - AI 对话功能修复与优化
+
+#### 需求背景
+用户配置好 BaseURL、ApiKey、ModelID 后发送消息没有 AI 回复，且 UI 交互有问题。
+
+#### 具体需求
+
+**1. 流式传输（Streaming）**
+- 发送消息时立即在列表中生成 AI 回复气泡（空内容占位符）
+- 通过 SSE（Server-Sent Events）流式接收 AI 回复内容
+- 气泡大小随内容增加动态扩展
+- 流式进行时在末尾显示光标符号 `▌`
+- 流式开始前（空内容）显示 loading 小圆圈
+
+**2. 清除上下文按钮重新设计**
+- 从右上角（叉号 X 图标）移除
+- 改为垃圾桶图标（Delete 图标），放在输入框左边
+- 避免和"关闭窗口"混淆
+
+**3. 测试连接真实验证**
+- 旧实现：只检查 API Key 是否非空（始终显示成功）
+- 新实现：实际发送一段简短的测试消息（"请回复数字1"）
+- 解析返回内容，识别是正常输出还是 HTTP 错误
+- 错误类型细分：401（Key 无效）、404（模型/地址错误）、400（Bad Request）等
+
+#### 影响文件
+- LLMApiService.kt: 添加 `@Streaming` 端点和 SSE 数据类
+- LLMClient.kt: 添加 `chatStream()` 方法（Flow<String>）
+- ChatViewModel.kt: sendMessage 改为流式，ChatMessage 添加 isStreaming 字段
+- ChatDrawer.kt: 按钮位置/图标变更，AssistantMessageBubble 支持流式显示
+- SettingsViewModel.kt: testLLMConnection 真实调用 API
+
+### 2026-02-10 - AI 对话功能二次修复
+
+#### 问题
+1. **流式传输实际不工作**：Retrofit 的 `@Streaming` + suspend 函数会缓冲整个响应，无法真正流式接收
+2. **感言上下文缺失**：ChatViewModel 没有 ThoughtRepository，AI 完全不知道用户的感言内容
+
+#### 解决方案
+
+**1. 流式传输改用 OkHttp 直接调用**
+- 移除 Retrofit 的 `@Streaming` 方案
+- 在 LLMClient 中将 `okHttpClient` 提升为类字段
+- `chatStream()` 直接用 OkHttp 构造请求、执行、读取 SSE 响应体
+
+**2. 感言上下文注入**
+- ChatViewModel 增加 `thoughtRepository: ThoughtRepository` 参数
+- `sendMessage()` 前先调用 `buildSystemPrompt()` 加载所有感言
+- system prompt 包含：所有已转换感言的标题+内容+时间，以及未转换感言数量
+- MainActivity 更新 ChatViewModel 创建方式，传入 thoughtRepository
+
+#### 影响文件
+- LLMClient.kt: okHttpClient 改为字段，chatStream 改用 OkHttp 直接调用
+- ChatViewModel.kt: 加 thoughtRepository 参数，buildSystemPrompt()，更新 sendMessage()
+- MainActivity.kt: ChatViewModel 构造时传入 thoughtRepository
+
 ### 2026-01-28 - UI/UX 重大改进
 
 #### 1. 播放器改进

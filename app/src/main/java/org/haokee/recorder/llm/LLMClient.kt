@@ -1,7 +1,15 @@
 package org.haokee.recorder.llm
 
+import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -16,6 +24,13 @@ class LLMClient(
     private val model: String
 ) {
     private val apiService: LLMApiService
+    private val gson = Gson()
+    private val okHttpClient: OkHttpClient
+
+    // Separate client for streaming — NO body-level logging interceptor.
+    // HttpLoggingInterceptor at Level.BODY buffers the entire response body before
+    // passing it on, which completely breaks SSE streaming.
+    private val streamingHttpClient: OkHttpClient
 
     init {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -30,9 +45,16 @@ class LLMClient(
             chain.proceed(requestWithAuth)
         }
 
-        val okHttpClient = OkHttpClient.Builder()
+        okHttpClient = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .build()
+
+        streamingHttpClient = OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
@@ -78,6 +100,73 @@ class LLMClient(
             Result.failure(e)
         }
     }
+
+    /**
+     * Send a message and receive response as a streaming Flow of text chunks (SSE).
+     * Uses OkHttp directly to avoid Retrofit buffering the response.
+     */
+    fun chatStream(
+        userMessage: String,
+        systemPrompt: String? = null,
+        history: List<Message> = emptyList()
+    ): Flow<String> = flow {
+        val messages = mutableListOf<Message>()
+        if (systemPrompt != null) {
+            messages.add(Message(role = "system", content = systemPrompt))
+        }
+        messages.addAll(history)
+        messages.add(Message(role = "user", content = userMessage))
+
+        val requestJson = gson.toJson(
+            ChatCompletionRequest(
+                model = model,
+                messages = messages,
+                temperature = 0.7,
+                stream = true
+            )
+        )
+
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val requestBody = requestJson.toRequestBody(mediaType)
+
+        val httpRequest = Request.Builder()
+            .url("${baseUrl}chat/completions")
+            .addHeader("Authorization", "Bearer $apiKey")
+            .post(requestBody)
+            .build()
+
+        val response = streamingHttpClient.newCall(httpRequest).execute()
+
+        if (!response.isSuccessful) {
+            val errorBody = response.body?.string() ?: ""
+            response.close()
+            throw Exception("HTTP ${response.code}: $errorBody")
+        }
+
+        response.body?.use { body ->
+            body.charStream().buffered().use { reader ->
+                var line = reader.readLine()
+                while (line != null) {
+                    if (line.startsWith("data: ")) {
+                        val data = line.removePrefix("data: ").trim()
+                        if (data == "[DONE]") break
+                        if (data.isNotBlank()) {
+                            try {
+                                val chunk = gson.fromJson(data, StreamChunk::class.java)
+                                val content = chunk.choices?.firstOrNull()?.delta?.content
+                                if (!content.isNullOrEmpty()) {
+                                    emit(content)
+                                }
+                            } catch (_: Exception) {
+                                // Skip malformed JSON lines
+                            }
+                        }
+                    }
+                    line = reader.readLine()
+                }
+            }
+        }
+    }.flowOn(Dispatchers.IO)
 
     /**
      * Generate title from content

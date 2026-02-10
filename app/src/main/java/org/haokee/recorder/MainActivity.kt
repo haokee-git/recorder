@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
             thoughtViewModel = ViewModelProvider(this, thoughtFactory)[ThoughtListViewModel::class.java]
 
             settingsViewModel = SettingsViewModel(settingsRepository, thoughtRepository)
-            chatViewModel = ChatViewModel(settingsRepository)
+            chatViewModel = ChatViewModel(settingsRepository, thoughtRepository)
 
             android.util.Log.d("MainActivity", "ViewModels created successfully")
 

@@ -1,8 +1,10 @@
 package org.haokee.recorder.llm
 
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.Headers
 import retrofit2.http.POST
+import retrofit2.http.Streaming
 
 /**
  * LLM API Service - OpenAI-compatible API interface
@@ -11,6 +13,11 @@ interface LLMApiService {
     @Headers("Content-Type: application/json")
     @POST("chat/completions")
     suspend fun chatCompletion(@Body request: ChatCompletionRequest): ChatCompletionResponse
+
+    @Streaming
+    @Headers("Content-Type: application/json")
+    @POST("chat/completions")
+    suspend fun chatCompletionStream(@Body request: ChatCompletionRequest): ResponseBody
 }
 
 data class ChatCompletionRequest(
@@ -45,4 +52,18 @@ data class Usage(
     val prompt_tokens: Int,
     val completion_tokens: Int,
     val total_tokens: Int
+)
+
+// SSE streaming data classes
+data class StreamChunk(
+    val choices: List<StreamChoice>? = null
+)
+
+data class StreamChoice(
+    val delta: StreamDelta? = null
+)
+
+data class StreamDelta(
+    val role: String? = null,
+    val content: String? = null
 )
