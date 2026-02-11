@@ -24,6 +24,8 @@ fun WaveformView(
     audioPath: String,
     cachedWaveform: String? = null, // 缓存的波形数据（CSV 格式）
     progress: Float = 0f, // 0.0 to 1.0
+    playedColor: Color = MaterialTheme.colorScheme.primary,
+    unplayedColor: Color = MaterialTheme.colorScheme.outlineVariant,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -102,9 +104,9 @@ fun WaveformView(
 
                 // Draw waveform bar
                 val color = if (x <= progressX) {
-                    Color(0xFF2196F3) // Blue for played portion
+                    playedColor
                 } else {
-                    Color.Gray.copy(alpha = 0.5f) // Gray for unplayed portion
+                    unplayedColor
                 }
 
                 drawLine(
@@ -118,7 +120,7 @@ fun WaveformView(
             // Draw progress indicator line
             if (progress > 0f) {
                 drawLine(
-                    color = Color(0xFF2196F3),
+                    color = playedColor,
                     start = Offset(progressX, 0f),
                     end = Offset(progressX, height),
                     strokeWidth = 2.dp.toPx()

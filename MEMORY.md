@@ -1594,4 +1594,190 @@ app/src/main/assets/sherpa-onnx-whisper-base/base-encoder.int8.onnx: 28MB
 
 ---
 
-*最后更新: 2026-02-02*
+### 2026-02-11 开发成果 - AI 对话功能全面优化
+
+完成了 AI 对话功能的多项关键改进，包括流式传输修复、多轮上下文、消息持久化、UI 交互优化等。
+
+#### 1. 流式传输修复 ✅
+
+**问题**：AI 回复不是逐字流式输出，而是一次性全部显示。
+
+**根本原因**：`HttpLoggingInterceptor` 在 `Level.BODY` 时会把整个响应体缓冲到内存再记日志，完全破坏了 SSE 流式传输。
+
+**解决方案**：
+- **LLMClient.kt** - 新增独立的 `streamingHttpClient`（无 BODY 日志拦截器）
+- 普通请求继续使用带 BODY 日志的 `okHttpClient`
+- 流式请求使用 `streamingHttpClient`，响应体逐行读取
+
+#### 2. 多轮对话上下文 ✅
+
+**LLMClient.kt** - `chatStream()` 增加 `history` 参数：
+```kotlin
+fun chatStream(
+    userMessage: String,
+    systemPrompt: String? = null,
+    history: List<Message> = emptyList()
+)
+```
+
+**ChatViewModel.kt** - `buildConversationHistory()` 方法：
+- 收集"上次清除上下文"之后的所有 user/assistant 消息
+- 排除空的流式占位符
+- 以 `Message` 列表形式传给 API
+
+#### 3. 消息持久化存储 ✅
+
+**新增文件**：
+- **ChatRepository.kt** - 聊天记录持久化
+  - `PersistedMessage` 数据类（id, role, content, timestamp）
+  - JSON 序列化存储到 `filesDir/chat_history.json`
+  - `save()` / `load()` / `clear()` 方法
+
+**ChatViewModel.kt** - 集成持久化：
+- `init` 时调用 `loadHistory()` 从文件加载历史
+- 以下时机自动保存：用户发送消息、AI 流式完成、用户点击停止、清除上下文
+- 感言内容不存储（每次发送时动态注入 system prompt）
+
+**MainActivity.kt** - 传入 `ChatRepository` 实例
+
+#### 4. 停止接收功能 ✅
+
+**ChatViewModel.kt**：
+- 新增 `streamingJob: Job?` 跟踪流式协程
+- `stopStreaming()` 方法：取消协程，标记 `isStreaming = false`，保留已输出内容
+- `sendMessage()` 中 `CancellationException` 单独捕获并 re-throw，不覆盖为错误信息
+
+**ChatDrawer.kt**：
+- 接收中显示红底白色 `FilledIconButton` + `Icons.Default.Stop`（与录音按钮风格一致）
+- 非接收中显示蓝色 `Icons.AutoMirrored.Filled.Send` 发送按钮
+
+#### 5. 重新生成功能 ✅
+
+**ChatViewModel.kt** - `regenerate(assistantMessageId: String)`：
+- 找到对应的用户消息和之前的上下文历史
+- 替换当前 AI 回复为新的流式占位符
+- 重新发起流式请求
+
+**ChatDrawer.kt**：
+- AI 气泡下方新增两个 `TextButton`（复制、重新生成）
+- 复制：使用系统 `ClipboardManager`
+- 重新生成：调用 `viewModel.regenerate(message.id)`
+- 全局 `isLoading` 时重新生成按钮禁用
+
+#### 6. UI 交互优化 ✅
+
+**全屏对话界面**：
+- 移除 `ModalDrawerSheet` 包裹，`ChatDrawer` 改为 `fillMaxSize()`
+- 保留 `ModalNavigationDrawer` 的左滑关闭手势
+- 添加 `windowInsetsPadding(WindowInsets.statusBars)` 避免标题被状态栏遮挡
+
+**输入区域优化**：
+- 接收消息时输入框仍可编辑（但发送按钮不可用）
+- 清除上下文按钮可用时显示蓝色（`colorScheme.primary`）
+- 输入框使用 `BasicTextField` + `OutlinedTextFieldDefaults.DecorationBox` 自定义内边距
+- Row 改为 `CenterVertically` 对齐，图标与单行输入框居中
+
+**文本可选**：
+- 用户气泡：`Text` 包在 `SelectionContainer` 中
+- AI 气泡：`TextView.setTextIsSelectable(true)`
+
+#### 影响文件
+- ✅ 新建 ChatRepository.kt
+- ✅ LLMClient.kt: streamingHttpClient, history 参数
+- ✅ LLMApiService.kt: SSE 数据类
+- ✅ ChatViewModel.kt: 持久化、停止、重新生成、多轮上下文
+- ✅ ChatDrawer.kt: 全屏、停止按钮、复制/重新生成、输入框优化、文本可选
+- ✅ MarkdownText.kt: setTextIsSelectable
+- ✅ RecorderScreen.kt: 移除 ModalDrawerSheet
+- ✅ MainActivity.kt: 传入 ChatRepository
+- ✅ SettingsViewModel.kt: 真实 API 测试连接
+
+#### 技术亮点
+- **流式修复**：识别 `HttpLoggingInterceptor` 缓冲响应体的根因
+- **CancellationException 处理**：单独捕获并 re-throw，避免协程框架异常
+- **上下文边界**：`buildConversationHistory()` 用 `indexOfLast { role == "system" }` 找到最后一条分割线
+- **持久化策略**：不存储感言内容（动态变化），只存储对话消息
+
+#### Git 提交
+- `6684980` - 优化 AI 对话功能：流式传输、多轮上下文、UI 交互改进
+- `d5eae59` - AI 对话：消息持久化、文本可选、复制/重新生成、停止按钮样式
+
+---
+
+### 2026-02-11 开发成果 - 设置页按钮修复 + 暗色主题全面实现
+
+完成了设置页"数据管理"按钮修复和暗色主题的全面适配，包括颜色方案完善、硬编码颜色替换和主题切换动画。
+
+#### 1. 设置页"数据管理"按钮修复 ✅
+
+**"清除所有感言"按钮边框修复**：
+- **问题**：按钮边框为默认蓝色，与红色文字/图标不协调
+- **修复**：添加 `border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)`
+- **文件**：SettingsScreen.kt
+
+**新增"清除AI对话记录"按钮**：
+- 样式与"清除所有感言"完全一致（红色边框、红色文字、DeleteForever 图标）
+- 点击弹出确认对话框（Warning 图标 + 红色确认按钮）
+- 确认后调用 `chatRepository.clear()` 清除文件，并通过回调通知 ChatViewModel 清空内存
+
+**SettingsViewModel.kt 改动**：
+- 注入 `ChatRepository` 和 `onChatHistoryCleared: () -> Unit` 回调
+- 新增 `clearChatHistory()` 方法
+
+**MainActivity.kt 改动**：
+- 传入 `chatRepository` 和 `{ chatViewModel.clearMessages() }` 回调到 SettingsViewModel
+
+#### 2. 暗色主题完善 ✅
+
+**Color.kt - 新增暗色颜色常量**（19 个）：
+- `DarkPrimary = 0xFF64B5F6`（亮蓝，适合暗色背景）
+- `DarkError = 0xFFFF6B6B`（亮红色）
+- `DarkBackground = 0xFF121212`，`DarkSurface = 0xFF1E1E1E`
+- 完整的 container、variant、outline 系列
+
+**Theme.kt - DarkColorScheme 完善**：
+- 所有 slot 使用新的暗色常量填充
+- 移除旧的 `BlueDark`、`BlueGreyDark`、`LightBlueDark` 颜色引用
+
+**Theme.kt - 主题切换 200ms 动画**：
+- 新增 `ColorScheme.animated()` 扩展函数
+- 使用 `animateColorAsState(color, tween(200))` 包裹所有颜色 slot
+- `RecorderTheme` 中调用 `colorScheme.animated()` 实现平滑过渡
+
+#### 3. 硬编码颜色替换为主题感知 ✅
+
+| 文件 | 改动 |
+|------|------|
+| **WaveformView.kt** | 新增 `playedColor` / `unplayedColor` 参数，默认值为 `MaterialTheme.colorScheme.primary` / `outlineVariant` |
+| **ThoughtItem.kt** | `Color.Red` → `MaterialTheme.colorScheme.error`（闹钟图标/文字 4 处），`Color.White` → `MaterialTheme.colorScheme.surface`（选择框背景） |
+| **RecordButton.kt** | 录音中 `Color.Red` → `MaterialTheme.colorScheme.error` |
+| **ThoughtToolbar.kt** | 删除按钮 `Color.Red` → `error`，`Color.White` → `onError` |
+| **ColorPickerDialog.kt** | 无色圆圈 `Color.Red` → `error`，`Color.White` → `surface` |
+| **RecorderScreen.kt** | 筛选无色圆圈同上 |
+| **ChatDrawer.kt** | 停止按钮保留 `Color.Red`/`Color.White`（红色停止按钮在任何主题都应醒目） |
+
+#### 影响文件
+- ✅ CLAUDE.md: 需求变更记录
+- ✅ Color.kt: 19 个暗色颜色常量
+- ✅ Theme.kt: DarkColorScheme 完善 + animated() 扩展
+- ✅ SettingsScreen.kt: 按钮边框 + 新增清除对话按钮
+- ✅ SettingsViewModel.kt: ChatRepository 注入 + clearChatHistory()
+- ✅ MainActivity.kt: 传参 + 回调
+- ✅ WaveformView.kt: 颜色参数化
+- ✅ ThoughtItem.kt: 4 处 error 替换 + surface 替换
+- ✅ RecordButton.kt: error 替换
+- ✅ ThoughtToolbar.kt: error/onError 替换
+- ✅ ColorPickerDialog.kt: error/surface 替换
+- ✅ RecorderScreen.kt: error/surface 替换
+
+#### 效果
+- ✅ "清除所有感言"按钮边框为红色
+- ✅ "清除AI对话记录"按钮样式一致，功能完整
+- ✅ 深色模式下所有颜色可读（主色调为亮蓝 0xFF64B5F6）
+- ✅ 主题切换 200ms 平滑过渡动画
+- ✅ 波形图、录音按钮、工具栏、选择框等在深色模式下正确显示
+- ✅ 闹钟时间、过期标记等使用主题 error 色
+
+---
+
+*最后更新: 2026-02-11*

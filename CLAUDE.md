@@ -925,3 +925,68 @@ fun selectAndScrollToThought(thoughtId: String) {
 - ✅ 用户必须主动操作才能关闭
 - ✅ 可以快速跳转到主界面查看详情
 - ✅ 音频自动播放，提供更强的提醒效果
+
+---
+
+### 2026-02-11 - 修复侧边滑动返回手势
+
+#### 需求背景
+在设置页面和 AI 对话页面中，屏幕侧边滑动的返回手势不会退回上一级页面，而是直接退出应用。
+
+#### 问题分析
+1. **设置页面**：使用 `currentScreen` 状态切换页面，但 `SettingsScreen` 没有添加 `BackHandler` 拦截系统返回手势，导致返回手势直接 finish Activity
+2. **AI 对话抽屉**：移除 `ModalDrawerSheet` 后，`ModalNavigationDrawer` 的内置返回处理可能失效，需要显式添加 `BackHandler` 关闭抽屉
+
+#### 解决方案
+1. **SettingsScreen.kt**：添加 `BackHandler(onBack = onNavigateBack)`，拦截返回手势并导航回主页面
+2. **RecorderScreen.kt**：添加 `BackHandler(enabled = drawerState.isOpen)` 拦截返回手势并关闭聊天抽屉
+3. **MainActivity.kt**：使用 `AnimatedContent` 包裹页面切换，添加水平滑动动画（300ms tween），防止设置页返回时手势泄漏到 `ModalNavigationDrawer` 导致聊天抽屉闪现
+
+#### 影响文件
+- SettingsScreen.kt: 添加 BackHandler, modifier 移到 Scaffold, 返回按钮振动
+- RecorderScreen.kt: 添加 drawer BackHandler, ChatDrawer 传入 onClose
+- ChatDrawer.kt: 右上角添加关闭按钮（向右箭头 + 振动）
+- MainActivity.kt: 双页面常驻 + animateFloatAsState + offset 滑动动画
+
+---
+
+### 2026-02-11 - 设置页按钮修复 + 暗色主题全面实现
+
+#### 需求背景
+1. "清除所有感言"按钮边框颜色为蓝色（应为红色），需新增"清除AI对话记录"按钮
+2. 深色模式配色不完善，多处硬编码颜色在暗色背景上不可读，需全面适配
+
+#### 具体改进
+
+**1. 设置页"数据管理"按钮修复**
+- "清除所有感言"按钮边框改为红色（`BorderStroke(1.dp, error)`）
+- 新增"清除AI对话记录"按钮，样式与"清除所有感言"一致
+- SettingsViewModel 注入 ChatRepository，新增 `clearChatHistory()` 方法
+- 通过回调通知 ChatViewModel 清空内存中的消息列表
+
+**2. 暗色主题完善**
+- 完善 DarkColorScheme 所有 slot（primary 改为亮蓝 0xFF64B5F6 等）
+- 新增 Color.kt 暗色颜色常量
+- Theme.kt 添加 `ColorScheme.animated()` 扩展，主题切换 200ms 动画
+
+**3. 硬编码颜色改为主题感知**
+- WaveformView.kt: 波形颜色参数化（playedColor / unplayedColor）
+- ThoughtItem.kt: 闹钟红色改为 error，选择框白色改为 surface
+- RecordButton.kt: 录音按钮颜色改用主题
+- ThoughtToolbar.kt: 删除按钮红色改为 error
+- ColorPickerDialog.kt: 无色圆圈颜色改用主题
+- RecorderScreen.kt: 筛选圆圈颜色改用主题
+
+#### 影响文件
+- CLAUDE.md: 需求变更记录
+- Color.kt: 新增暗色颜色常量
+- Theme.kt: 完善 DarkColorScheme + animated() 扩展
+- SettingsScreen.kt: 按钮边框红色 + 新增清除对话按钮
+- SettingsViewModel.kt: 注入 ChatRepository + clearChatHistory()
+- MainActivity.kt: 传 chatRepository + 回调
+- WaveformView.kt: 颜色参数化
+- ThoughtItem.kt: 主题颜色替换
+- RecordButton.kt: 主题颜色替换
+- ThoughtToolbar.kt: 主题颜色替换
+- ColorPickerDialog.kt: 主题颜色替换
+- RecorderScreen.kt: 主题颜色替换

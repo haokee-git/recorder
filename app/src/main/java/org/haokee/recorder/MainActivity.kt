@@ -4,12 +4,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.ViewModelProvider
+import kotlin.math.roundToInt
 import org.haokee.recorder.audio.player.AudioPlayer
 import org.haokee.recorder.audio.recorder.AudioRecorder
 import org.haokee.recorder.data.local.ThoughtDatabase
@@ -55,9 +61,12 @@ class MainActivity : ComponentActivity() {
             val thoughtFactory = ThoughtViewModelFactory(applicationContext, thoughtRepository, settingsRepository, audioRecorder, audioPlayer)
             thoughtViewModel = ViewModelProvider(this, thoughtFactory)[ThoughtListViewModel::class.java]
 
-            settingsViewModel = SettingsViewModel(settingsRepository, thoughtRepository)
             val chatRepository = ChatRepository(applicationContext)
             chatViewModel = ChatViewModel(settingsRepository, thoughtRepository, chatRepository)
+            settingsViewModel = SettingsViewModel(
+                settingsRepository, thoughtRepository, chatRepository,
+                onChatHistoryCleared = { chatViewModel.clearMessages() }
+            )
 
             android.util.Log.d("MainActivity", "ViewModels created successfully")
 
@@ -70,17 +79,30 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             RecorderTheme(darkTheme = settingsViewModel.uiState.value.isDarkTheme) {
-                when (currentScreen) {
-                    Screen.RECORDER -> RecorderScreen(
+                val slideOffset by animateFloatAsState(
+                    targetValue = if (currentScreen == Screen.SETTINGS) 1f else 0f,
+                    animationSpec = tween(300),
+                    label = "screenSlide"
+                )
+
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val widthPx = constraints.maxWidth.toFloat()
+
+                    RecorderScreen(
                         viewModel = thoughtViewModel,
                         chatViewModel = chatViewModel,
                         onSettingsClick = { currentScreen = Screen.SETTINGS },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .offset { IntOffset((-widthPx * slideOffset).roundToInt(), 0) }
                     )
-                    Screen.SETTINGS -> SettingsScreen(
+
+                    SettingsScreen(
                         viewModel = settingsViewModel,
                         onNavigateBack = { currentScreen = Screen.RECORDER },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .offset { IntOffset((widthPx * (1f - slideOffset)).roundToInt(), 0) }
                     )
                 }
             }

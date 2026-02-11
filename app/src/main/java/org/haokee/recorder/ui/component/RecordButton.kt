@@ -38,7 +38,7 @@ fun RecordButton(
             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             onClick()
         },
-        containerColor = if (isRecording) Color.Red else Color(0xFF4CAF50), // Green when idle, Red when recording
+        containerColor = if (isRecording) MaterialTheme.colorScheme.error else Color(0xFF4CAF50),
         shape = RoundedCornerShape(cornerRadius),
         modifier = modifier.size(72.dp)
     ) {

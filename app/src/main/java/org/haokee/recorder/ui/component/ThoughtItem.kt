@@ -157,12 +157,12 @@ fun TranscribedThoughtItem(
                                 imageVector = Icons.Default.Alarm,
                                 contentDescription = "提醒时间",
                                 modifier = Modifier.size(14.dp),
-                                tint = if (isExpired) Color.Red else MaterialTheme.colorScheme.primary
+                                tint = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = alarmTime.toDisplayString() + if (isExpired) " (已过期)" else "",
                                 fontSize = 12.sp,
-                                color = if (isExpired) Color.Red else MaterialTheme.colorScheme.primary
+                                color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -302,12 +302,12 @@ fun OriginalThoughtItem(
                                 imageVector = Icons.Default.Alarm,
                                 contentDescription = "提醒时间",
                                 modifier = Modifier.size(14.dp),
-                                tint = if (isExpired) Color.Red else MaterialTheme.colorScheme.primary
+                                tint = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = alarmTime.toDisplayString() + if (isExpired) " (已过期)" else "",
                                 fontSize = 12.sp,
-                                color = if (isExpired) Color.Red else MaterialTheme.colorScheme.primary
+                                color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -446,12 +446,12 @@ fun ExpiredThoughtItem(
                                 imageVector = Icons.Default.Alarm,
                                 contentDescription = "提醒时间",
                                 modifier = Modifier.size(14.dp),
-                                tint = Color.Red.copy(alpha = 0.7f)
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                             )
                             Text(
                                 text = alarmTime.toDisplayString() + " (已过期)",
                                 fontSize = 12.sp,
-                                color = Color.Red.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -526,7 +526,7 @@ private fun AnimatedCheckbox(
                 shape = RoundedCornerShape(cornerRadius)
             )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(if (isSelected) primaryColor else Color.White)
+            .background(if (isSelected) primaryColor else MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {

@@ -156,7 +156,12 @@ fun RecorderScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ChatDrawer(viewModel = chatViewModel)
+            ChatDrawer(
+                viewModel = chatViewModel,
+                onClose = {
+                    coroutineScope.launch { drawerState.close() }
+                }
+            )
         },
         modifier = modifier
     ) {
@@ -541,6 +546,11 @@ fun RecorderScreen(
     BackHandler(enabled = uiState.isMultiSelectMode) {
         viewModel.clearSelection()
     }
+
+    // Handle back gesture when chat drawer is open (higher priority than selection clearing)
+    BackHandler(enabled = drawerState.isOpen) {
+        coroutineScope.launch { drawerState.close() }
+    }
 }
 
 @Composable
@@ -744,10 +754,10 @@ private fun NoColorFilterCircle(
         modifier = Modifier
             .size(40.dp)
             .clip(RoundedCornerShape(cornerRadius))
-            .background(androidx.compose.ui.graphics.Color.Red)
+            .background(MaterialTheme.colorScheme.error)
             .padding(1.dp)
             .clip(RoundedCornerShape(innerCornerRadius))
-            .background(androidx.compose.ui.graphics.Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onClick()
@@ -755,9 +765,10 @@ private fun NoColorFilterCircle(
         contentAlignment = Alignment.Center
     ) {
         // Draw diagonal slash that extends from corner to corner
+        val errorColor = MaterialTheme.colorScheme.error
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawLine(
-                color = androidx.compose.ui.graphics.Color.Red,
+                color = errorColor,
                 start = androidx.compose.ui.geometry.Offset(0f, 0f),
                 end = androidx.compose.ui.geometry.Offset(size.width, size.height),
                 strokeWidth = 3.dp.toPx(),

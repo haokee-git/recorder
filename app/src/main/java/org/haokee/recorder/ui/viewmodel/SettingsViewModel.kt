@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.haokee.recorder.data.repository.ChatRepository
 import org.haokee.recorder.data.repository.SettingsRepository
 import org.haokee.recorder.data.repository.ThoughtRepository
 import org.haokee.recorder.llm.LLMClient
@@ -25,7 +26,9 @@ data class SettingsUiState(
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
-    private val thoughtRepository: ThoughtRepository
+    private val thoughtRepository: ThoughtRepository,
+    private val chatRepository: ChatRepository,
+    private val onChatHistoryCleared: () -> Unit = {}
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -190,6 +193,11 @@ class SettingsViewModel(
                 }
             }
         }
+    }
+
+    fun clearChatHistory() {
+        chatRepository.clear()
+        onChatHistoryCleared()
     }
 
     fun clearError() {

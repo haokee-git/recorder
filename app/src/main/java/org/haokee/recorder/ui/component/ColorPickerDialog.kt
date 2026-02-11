@@ -218,10 +218,10 @@ private fun NoColorCircle(
         modifier = Modifier
             .size(56.dp)
             .clip(RoundedCornerShape(cornerRadius))
-            .background(Color.Red)
+            .background(MaterialTheme.colorScheme.error)
             .padding(1.dp)
             .clip(RoundedCornerShape(innerCornerRadius))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onClick()
@@ -229,9 +229,10 @@ private fun NoColorCircle(
         contentAlignment = Alignment.Center
     ) {
         // Draw diagonal slash that extends from corner to corner
+        val errorColor = MaterialTheme.colorScheme.error
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawLine(
-                color = Color.Red,
+                color = errorColor,
                 start = Offset(0f, 0f),
                 end = Offset(size.width, size.height),
                 strokeWidth = 3.dp.toPx(),

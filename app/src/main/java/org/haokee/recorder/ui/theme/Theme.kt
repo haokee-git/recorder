@@ -1,8 +1,10 @@
 package org.haokee.recorder.ui.theme
 
-import android.app.Activity
 import android.os.Build
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -13,21 +15,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = BlueDark,
-    onPrimary = Color.White,
-    primaryContainer = BlueGreyDark,
-    onPrimaryContainer = Color.White,
-    secondary = BlueGreyDark,
-    onSecondary = Color.White,
-    tertiary = LightBlueDark,
-    onTertiary = Color.White,
-    background = Color(0xFF121212),
+    primary = DarkPrimary,
+    onPrimary = DarkOnPrimary,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
+    secondary = DarkSecondary,
+    onSecondary = DarkOnPrimary,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
+    tertiary = DarkTertiary,
+    onTertiary = DarkOnPrimary,
+    background = DarkBackground,
     onBackground = Color.White,
-    surface = Color(0xFF1E1E1E),
+    surface = DarkSurface,
     onSurface = Color.White,
-    surfaceVariant = BlueDark,
-    onSurfaceVariant = Color.White,
-    outline = Blue40
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
+    error = DarkError,
+    onError = DarkOnError,
+    errorContainer = DarkErrorContainer,
+    onErrorContainer = DarkOnErrorContainer,
+    surfaceContainer = DarkSurfaceContainer,
+    surfaceContainerHigh = DarkSurfaceContainerHigh,
+    surfaceContainerHighest = DarkSurfaceContainerHighest
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -53,6 +65,38 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
+private fun ColorScheme.animated(): ColorScheme {
+    val spec = tween<Color>(200)
+    return copy(
+        primary = animateColorAsState(primary, spec, label = "primary").value,
+        onPrimary = animateColorAsState(onPrimary, spec, label = "onPrimary").value,
+        primaryContainer = animateColorAsState(primaryContainer, spec, label = "primaryContainer").value,
+        onPrimaryContainer = animateColorAsState(onPrimaryContainer, spec, label = "onPrimaryContainer").value,
+        secondary = animateColorAsState(secondary, spec, label = "secondary").value,
+        onSecondary = animateColorAsState(onSecondary, spec, label = "onSecondary").value,
+        secondaryContainer = animateColorAsState(secondaryContainer, spec, label = "secondaryContainer").value,
+        onSecondaryContainer = animateColorAsState(onSecondaryContainer, spec, label = "onSecondaryContainer").value,
+        tertiary = animateColorAsState(tertiary, spec, label = "tertiary").value,
+        onTertiary = animateColorAsState(onTertiary, spec, label = "onTertiary").value,
+        background = animateColorAsState(background, spec, label = "background").value,
+        onBackground = animateColorAsState(onBackground, spec, label = "onBackground").value,
+        surface = animateColorAsState(surface, spec, label = "surface").value,
+        onSurface = animateColorAsState(onSurface, spec, label = "onSurface").value,
+        surfaceVariant = animateColorAsState(surfaceVariant, spec, label = "surfaceVariant").value,
+        onSurfaceVariant = animateColorAsState(onSurfaceVariant, spec, label = "onSurfaceVariant").value,
+        outline = animateColorAsState(outline, spec, label = "outline").value,
+        outlineVariant = animateColorAsState(outlineVariant, spec, label = "outlineVariant").value,
+        error = animateColorAsState(error, spec, label = "error").value,
+        onError = animateColorAsState(onError, spec, label = "onError").value,
+        errorContainer = animateColorAsState(errorContainer, spec, label = "errorContainer").value,
+        onErrorContainer = animateColorAsState(onErrorContainer, spec, label = "onErrorContainer").value,
+        surfaceContainer = animateColorAsState(surfaceContainer, spec, label = "surfaceContainer").value,
+        surfaceContainerHigh = animateColorAsState(surfaceContainerHigh, spec, label = "surfaceContainerHigh").value,
+        surfaceContainerHighest = animateColorAsState(surfaceContainerHighest, spec, label = "surfaceContainerHighest").value
+    )
+}
+
+@Composable
 fun RecorderTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is DISABLED - use fixed blue theme
@@ -70,7 +114,7 @@ fun RecorderTheme(
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = colorScheme.animated(),
         typography = Typography,
         content = content
     )

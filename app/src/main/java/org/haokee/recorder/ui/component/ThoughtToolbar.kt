@@ -110,8 +110,8 @@ private fun DeleteButton(
         },
         enabled = enabled,
         colors = ButtonDefaults.textButtonColors(
-            containerColor = if (isPending) androidx.compose.ui.graphics.Color.Red else androidx.compose.ui.graphics.Color.Transparent,
-            contentColor = if (isPending) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
+            containerColor = if (isPending) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color.Transparent,
+            contentColor = if (isPending) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         ),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),

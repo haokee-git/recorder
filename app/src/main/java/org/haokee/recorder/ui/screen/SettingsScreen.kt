@@ -1,5 +1,6 @@
 package org.haokee.recorder.ui.screen
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.unit.dp
 import org.haokee.recorder.ui.viewmodel.SettingsViewModel
 
@@ -21,16 +24,26 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
+
+    // Handle system back gesture (edge swipe) to navigate back
+    androidx.activity.compose.BackHandler(onBack = onNavigateBack)
+
     val uiState by viewModel.uiState.collectAsState()
     var showApiKeyDialog by remember { mutableStateOf(false) }
     var showClearDataDialog by remember { mutableStateOf(false) }
+    var showClearChatDialog by remember { mutableStateOf(false) }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("设置") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onNavigateBack()
+                    }) {
                         Icon(Icons.Default.ArrowBack, "返回")
                     }
                 }
@@ -38,7 +51,7 @@ fun SettingsScreen(
         }
     ) { padding ->
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
@@ -175,6 +188,7 @@ fun SettingsScreen(
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -182,6 +196,22 @@ fun SettingsScreen(
                 Icon(Icons.Default.DeleteForever, null)
                 Spacer(Modifier.width(8.dp))
                 Text("清除所有感言")
+            }
+
+            // Clear Chat History Button
+            OutlinedButton(
+                onClick = { showClearChatDialog = true },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Icon(Icons.Default.DeleteForever, null)
+                Spacer(Modifier.width(8.dp))
+                Text("清除AI对话记录")
             }
 
             Divider(modifier = Modifier.padding(vertical = 16.dp))
@@ -292,6 +322,34 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearDataDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    // Clear Chat History Confirmation Dialog
+    if (showClearChatDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearChatDialog = false },
+            icon = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("清除AI对话记录") },
+            text = { Text("此操作将删除所有AI对话记录，且无法恢复。确定要继续吗？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearChatHistory()
+                        showClearChatDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("确定删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearChatDialog = false }) {
                     Text("取消")
                 }
             }
