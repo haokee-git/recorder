@@ -11,10 +11,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -96,7 +103,11 @@ fun ChatDrawer(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(uiState.messages) { message ->
-                ChatMessageItem(message = message)
+                ChatMessageItem(
+                    message = message,
+                    isLoading = uiState.isLoading,
+                    onRegenerate = { viewModel.regenerate(it) }
+                )
             }
         }
 
@@ -149,7 +160,7 @@ fun ChatDrawer(
                         placeholder = { Text("输入消息...") },
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 11.dp),
                         container = {
-                            OutlinedTextFieldDefaults.ContainerBox(
+                            OutlinedTextFieldDefaults.Container(
                                 enabled = inputEnabled,
                                 isError = false,
                                 interactionSource = inputInteractionSource,
@@ -161,13 +172,18 @@ fun ChatDrawer(
                 }
             )
 
-            // 接收中：红色停止按钮；否则：蓝色发送按钮
+            // 接收中：红底白色停止按钮（与录音按钮风格一致）；否则：蓝色发送按钮
             if (uiState.isLoading) {
-                IconButton(onClick = { viewModel.stopStreaming() }) {
+                FilledIconButton(
+                    onClick = { viewModel.stopStreaming() },
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color.Red,
+                        contentColor = Color.White
+                    )
+                ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "停止",
-                        tint = Color.Red
+                        imageVector = Icons.Default.Stop,
+                        contentDescription = "停止"
                     )
                 }
             } else {
@@ -179,7 +195,7 @@ fun ChatDrawer(
                     enabled = sendEnabled
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Send,
+                        imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "发送",
                         tint = if (sendEnabled) {
                             MaterialTheme.colorScheme.primary
@@ -194,10 +210,14 @@ fun ChatDrawer(
 }
 
 @Composable
-private fun ChatMessageItem(message: ChatMessage) {
+private fun ChatMessageItem(
+    message: ChatMessage,
+    isLoading: Boolean,
+    onRegenerate: (String) -> Unit
+) {
     when (message.role) {
         "user" -> UserMessageBubble(message.content)
-        "assistant" -> AssistantMessageBubble(message.content, message.isStreaming)
+        "assistant" -> AssistantMessageBubble(message, isLoading, onRegenerate)
         "system" -> SystemMessageDivider(message.content)
     }
 }
@@ -215,21 +235,26 @@ private fun UserMessageBubble(content: String) {
                 .padding(12.dp)
                 .widthIn(max = 280.dp)
         ) {
-            Text(
-                text = content,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            SelectionContainer {
+                Text(
+                    text = content,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun AssistantMessageBubble(content: String, isStreaming: Boolean = false) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start
-    ) {
+private fun AssistantMessageBubble(
+    message: ChatMessage,
+    isLoading: Boolean,
+    onRegenerate: (String) -> Unit
+) {
+    val context = LocalContext.current
+
+    Column(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp))
@@ -237,20 +262,55 @@ private fun AssistantMessageBubble(content: String, isStreaming: Boolean = false
                 .padding(12.dp)
                 .widthIn(max = 280.dp)
         ) {
-            if (content.isEmpty() && isStreaming) {
-                // Show loading spinner while waiting for first token
+            if (message.content.isEmpty() && message.isStreaming) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             } else {
-                // Show content with streaming cursor if still streaming
-                val displayContent = if (isStreaming) "$content▌" else content
+                val displayContent = if (message.isStreaming) "${message.content}▌" else message.content
                 MarkdownText(
                     markdown = displayContent,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+        }
+
+        // Copy / Regenerate buttons — only when not streaming
+        if (!message.isStreaming && message.content.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(0.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("AI回复", message.content))
+                    },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "复制",
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("复制", style = MaterialTheme.typography.labelSmall)
+                }
+                TextButton(
+                    onClick = { onRegenerate(message.id) },
+                    enabled = !isLoading,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "重新生成",
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("重新生成", style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
     }

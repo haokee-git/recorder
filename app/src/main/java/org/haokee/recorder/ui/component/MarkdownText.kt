@@ -50,6 +50,7 @@ fun MarkdownText(
                 setTextColor(textColorInt)
                 setLinkTextColor(linkColorInt)
                 textSize = 14f
+                setTextIsSelectable(true)
             }
         },
         update = { textView ->

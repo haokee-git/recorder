@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider
 import org.haokee.recorder.audio.player.AudioPlayer
 import org.haokee.recorder.audio.recorder.AudioRecorder
 import org.haokee.recorder.data.local.ThoughtDatabase
+import org.haokee.recorder.data.repository.ChatRepository
 import org.haokee.recorder.data.repository.SettingsRepository
 import org.haokee.recorder.data.repository.ThoughtRepository
 import org.haokee.recorder.ui.screen.RecorderScreen
@@ -55,7 +56,8 @@ class MainActivity : ComponentActivity() {
             thoughtViewModel = ViewModelProvider(this, thoughtFactory)[ThoughtListViewModel::class.java]
 
             settingsViewModel = SettingsViewModel(settingsRepository, thoughtRepository)
-            chatViewModel = ChatViewModel(settingsRepository, thoughtRepository)
+            val chatRepository = ChatRepository(applicationContext)
+            chatViewModel = ChatViewModel(settingsRepository, thoughtRepository, chatRepository)
 
             android.util.Log.d("MainActivity", "ViewModels created successfully")
 

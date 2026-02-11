@@ -3,6 +3,7 @@ package org.haokee.recorder.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.haokee.recorder.data.repository.ChatRepository
+import org.haokee.recorder.data.repository.PersistedMessage
 import org.haokee.recorder.data.repository.SettingsRepository
 import org.haokee.recorder.data.repository.ThoughtRepository
 import org.haokee.recorder.llm.LLMClient
@@ -35,7 +38,8 @@ data class ChatUiState(
 
 class ChatViewModel(
     private val settingsRepository: SettingsRepository,
-    private val thoughtRepository: ThoughtRepository
+    private val thoughtRepository: ThoughtRepository,
+    private val chatRepository: ChatRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -47,6 +51,7 @@ class ChatViewModel(
 
     init {
         loadSettings()
+        loadHistory()
     }
 
     private fun loadSettings() {
@@ -59,6 +64,25 @@ class ChatViewModel(
                     )
                 }
             }
+        }
+    }
+
+    private fun loadHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val persisted = chatRepository.load()
+            val messages = persisted.map { p ->
+                ChatMessage(id = p.id, role = p.role, content = p.content, timestamp = p.timestamp)
+            }
+            _uiState.update { it.copy(messages = messages) }
+        }
+    }
+
+    private fun saveHistory() {
+        val messages = _uiState.value.messages
+        viewModelScope.launch(Dispatchers.IO) {
+            chatRepository.save(messages.map { m ->
+                PersistedMessage(id = m.id, role = m.role, content = m.content, timestamp = m.timestamp)
+            })
         }
     }
 
@@ -91,6 +115,8 @@ class ChatViewModel(
                 error = null
             )
         }
+        // Save after user message is appended
+        saveHistory()
 
         streamingJob = viewModelScope.launch {
             try {
@@ -114,7 +140,7 @@ class ChatViewModel(
                     }
                 }
 
-                // Streaming complete
+                // Streaming complete — finalize and save
                 _uiState.update { state ->
                     state.copy(
                         messages = state.messages.map { msg ->
@@ -124,8 +150,9 @@ class ChatViewModel(
                         isLoading = false
                     )
                 }
+                saveHistory()
             } catch (e: CancellationException) {
-                // User tapped stop — stopStreaming() already cleaned up state, keep partial content
+                // User tapped stop — stopStreaming() already cleaned up state and will save
                 throw e
             } catch (e: Exception) {
                 android.util.Log.e("ChatViewModel", "Streaming failed", e)
@@ -139,6 +166,7 @@ class ChatViewModel(
                         isLoading = false
                     )
                 }
+                saveHistory()
             }
         }
     }
@@ -176,6 +204,80 @@ class ChatViewModel(
         return sb.toString()
     }
 
+    fun regenerate(assistantMessageId: String) {
+        if (_uiState.value.isLoading) return
+        val messages = _uiState.value.messages
+        val assistantIndex = messages.indexOfFirst { it.id == assistantMessageId }
+        if (assistantIndex < 0) return
+
+        // Find the user message right before this assistant response
+        val userMsg = messages.subList(0, assistantIndex).lastOrNull { it.role == "user" } ?: return
+        val userIndex = messages.indexOf(userMsg)
+
+        // Build history: everything before the user message (after last context clear)
+        val before = messages.subList(0, userIndex)
+        val lastClearIndex = before.indexOfLast { it.role == "system" }
+        val relevant = if (lastClearIndex >= 0) before.drop(lastClearIndex + 1) else before
+        val history = relevant
+            .filter { it.role == "user" || it.role == "assistant" }
+            .filter { it.content.isNotEmpty() }
+            .map { Message(role = it.role, content = it.content) }
+
+        // Replace old assistant message with a fresh streaming placeholder
+        val newAssistantId = java.util.UUID.randomUUID().toString()
+        val placeholder = ChatMessage(id = newAssistantId, role = "assistant", content = "", isStreaming = true)
+        val newMessages = messages.toMutableList().also { it[assistantIndex] = placeholder }
+
+        _uiState.update { it.copy(messages = newMessages, isLoading = true) }
+        saveHistory()
+
+        streamingJob = viewModelScope.launch {
+            try {
+                val systemPrompt = buildSystemPrompt()
+                val llmClient = createLLMClient()
+                var accumulatedContent = ""
+
+                llmClient.chatStream(
+                    userMessage = userMsg.content,
+                    systemPrompt = systemPrompt,
+                    history = history
+                ).collect { chunk ->
+                    accumulatedContent += chunk
+                    _uiState.update { state ->
+                        state.copy(messages = state.messages.map { msg ->
+                            if (msg.id == newAssistantId) msg.copy(content = accumulatedContent) else msg
+                        })
+                    }
+                }
+
+                _uiState.update { state ->
+                    state.copy(
+                        messages = state.messages.map { msg ->
+                            if (msg.id == newAssistantId) msg.copy(isStreaming = false) else msg
+                        },
+                        isLoading = false
+                    )
+                }
+                saveHistory()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e("ChatViewModel", "Regenerate failed", e)
+                _uiState.update { state ->
+                    state.copy(
+                        messages = state.messages.map { msg ->
+                            if (msg.id == newAssistantId)
+                                msg.copy(content = "⚠️ 重新生成失败：${e.message}", isStreaming = false)
+                            else msg
+                        },
+                        isLoading = false
+                    )
+                }
+                saveHistory()
+            }
+        }
+    }
+
     fun stopStreaming() {
         streamingJob?.cancel()
         streamingJob = null
@@ -187,6 +289,7 @@ class ChatViewModel(
                 isLoading = false
             )
         }
+        saveHistory()
     }
 
     /**
@@ -213,10 +316,12 @@ class ChatViewModel(
                 )
             )
         }
+        saveHistory()
     }
 
     fun clearMessages() {
         _uiState.update { it.copy(messages = emptyList()) }
+        viewModelScope.launch(Dispatchers.IO) { chatRepository.clear() }
     }
 
     fun clearError() {
