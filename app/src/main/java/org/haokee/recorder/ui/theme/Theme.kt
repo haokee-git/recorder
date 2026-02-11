@@ -11,29 +11,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-// Dark scheme: same hue relationships as light, just inverted for dark background
+// Dark scheme: bright = primary (主), dim = secondary/outline (辅)
+// 亮的为主，暗的为辅，主辅之间有明显亮度差
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF64B5F6),            // bright blue (light: 0xFF004370 dark blue)
+    primary = Color(0xFF64B5F6),             // 亮蓝 — 主色，最醒目
     onPrimary = Color(0xFF003258),
-    primaryContainer = Color(0xFF1A3A5C),    // dark blue tint (light: 0xFFBBDEFB light blue)
+    primaryContainer = Color(0xFF1A3A5C),     // 深蓝底 — 用户气泡等容器
     onPrimaryContainer = Color(0xFFD1E4FF),
-    secondary = Color(0xFF90CAF9),
-    onSecondary = Color(0xFF003258),
-    secondaryContainer = Color(0xFF303030),  // neutral dark grey (light: Material default grey)
+    secondary = Color(0xFF3D7AB5),            // 暗蓝 — 辅色，明显比 primary 暗
+    onSecondary = Color(0xFFE0E0E0),
+    secondaryContainer = Color(0xFF303030),   // 中性灰底 — AI 气泡等容器
     onSecondaryContainer = Color(0xFFE0E0E0),
-    tertiary = Color(0xFFBBDEFB),
-    onTertiary = Color(0xFF003258),
+    tertiary = Color(0xFF2A5F8F),             // 更暗蓝 — 第三级
+    onTertiary = Color(0xFFE0E0E0),
     background = Color(0xFF121212),
     onBackground = Color(0xFFE0E0E0),
     surface = Color(0xFF1E1E1E),
     onSurface = Color(0xFFE0E0E0),
     surfaceVariant = Color(0xFF2C2C2C),
     onSurfaceVariant = Color(0xFFB0B0B0),
-    outline = Color(0xFF64B5F6),
+    outline = Color(0xFF3D7AB5),              // 暗蓝 — 边框等辅助线，和 secondary 同级
     outlineVariant = Color(0xFF444444),
-    error = Color(0xFFFF6B6B),
+    error = Color(0xFFFF6B6B),                // 亮红 — 主错误色
     onError = Color(0xFF600000),
-    errorContainer = Color(0xFF93000A),
+    errorContainer = Color(0xFF4A1C1C),       // 深红底 — 错误容器，比 error 明显暗
     onErrorContainer = Color(0xFFFFDAD6),
     surfaceContainer = Color(0xFF252525),
     surfaceContainerHigh = Color(0xFF2C2C2C),
