@@ -990,3 +990,24 @@ fun selectAndScrollToThought(thoughtId: String) {
 - ThoughtToolbar.kt: 主题颜色替换
 - ColorPickerDialog.kt: 主题颜色替换
 - RecorderScreen.kt: 主题颜色替换
+
+---
+
+### 2026-02-11 - AI 对话复制/重新生成按钮优化
+
+#### 需求背景
+AI 没有输出任何内容时（如出错返回空内容），气泡下方不显示任何操作按钮，用户无法重新生成。
+
+#### 具体改进
+
+**1. 空内容也显示操作按钮**
+- 条件从 `!message.isStreaming && message.content.isNotEmpty()` 改为 `!message.isStreaming`
+- AI 输出为空时也显示复制和重新生成按钮
+- 复制按钮在内容为空时禁用（`enabled = message.content.isNotEmpty()`）
+- 重新生成按钮始终可用（受全局 isLoading 控制）
+
+**2. 复制成功提示**
+- 点击复制按钮后显示 Toast "已复制到剪切板"
+
+#### 影响文件
+- ChatDrawer.kt: AssistantMessageBubble 按钮显示逻辑和复制提示

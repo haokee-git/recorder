@@ -1780,4 +1780,19 @@ fun chatStream(
 
 ---
 
+### 2026-02-11 开发成果 - AI 对话复制/重新生成按钮优化
+
+#### 改动内容
+
+**ChatDrawer.kt - AssistantMessageBubble**：
+- 按钮显示条件从 `!message.isStreaming && message.content.isNotEmpty()` 改为 `!message.isStreaming`
+- AI 输出为空时也显示复制和重新生成按钮，方便用户重新生成
+- 复制按钮在内容为空时禁用（`enabled = copyEnabled`）
+- 点击复制按钮后显示 Toast "已复制到剪切板"
+
+#### 影响文件
+- ✅ ChatDrawer.kt
+
+---
+
 *最后更新: 2026-02-11*

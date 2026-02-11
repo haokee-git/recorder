@@ -303,7 +303,8 @@ private fun AssistantMessageBubble(
         }
 
         // Copy / Regenerate buttons — only when not streaming
-        if (!message.isStreaming && message.content.isNotEmpty()) {
+        if (!message.isStreaming) {
+            val copyEnabled = message.content.isNotEmpty()
             Row(
                 horizontalArrangement = Arrangement.spacedBy(0.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -312,7 +313,9 @@ private fun AssistantMessageBubble(
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         clipboard.setPrimaryClip(ClipData.newPlainText("AI回复", message.content))
+                        android.widget.Toast.makeText(context, "已复制到剪切板", android.widget.Toast.LENGTH_SHORT).show()
                     },
+                    enabled = copyEnabled,
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
