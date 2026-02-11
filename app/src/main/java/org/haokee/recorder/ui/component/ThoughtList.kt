@@ -392,7 +392,7 @@ private fun SectionCheckbox(
                 shape = RoundedCornerShape(cornerRadius)
             )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(if (isSelected) primaryColor else Color.White),
+            .background(if (isSelected) primaryColor else Color.Transparent),
         contentAlignment = Alignment.Center
     ) {
         // Animated check mark from left to right

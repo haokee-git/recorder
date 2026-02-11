@@ -526,7 +526,7 @@ private fun AnimatedCheckbox(
                 shape = RoundedCornerShape(cornerRadius)
             )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(if (isSelected) primaryColor else MaterialTheme.colorScheme.surface)
+            .background(if (isSelected) primaryColor else Color.Transparent)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {

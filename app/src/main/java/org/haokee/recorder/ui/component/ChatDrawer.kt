@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
@@ -31,7 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -42,8 +45,10 @@ import org.haokee.recorder.ui.viewmodel.ChatViewModel
 @Composable
 fun ChatDrawer(
     viewModel: ChatViewModel,
+    onClose: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
@@ -55,19 +60,38 @@ fun ChatDrawer(
         }
     }
 
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(16.dp)
     ) {
         // Header
-        Text(
-            text = "AI 对话",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "AI 对话",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            IconButton(onClick = {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClose()
+            }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "关闭"
+                )
+            }
+        }
 
         // Status indicator
         if (!uiState.isLLMEnabled || !uiState.isLLMConfigured) {
@@ -206,6 +230,7 @@ fun ChatDrawer(
                 }
             }
         }
+    }
     }
 }
 
