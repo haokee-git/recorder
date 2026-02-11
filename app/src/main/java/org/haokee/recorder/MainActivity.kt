@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -78,7 +79,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            RecorderTheme(darkTheme = settingsViewModel.uiState.value.isDarkTheme) {
+            val settingsState by settingsViewModel.uiState.collectAsState()
+            RecorderTheme(darkTheme = settingsState.isDarkTheme) {
                 val slideOffset by animateFloatAsState(
                     targetValue = if (currentScreen == Screen.SETTINGS) 1f else 0f,
                     animationSpec = tween(300),
