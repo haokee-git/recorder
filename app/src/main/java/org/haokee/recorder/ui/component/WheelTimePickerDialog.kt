@@ -211,15 +211,13 @@ fun WheelTimePickerDialog(
                     }
                 }
 
-                // Validation error message
-                validationError?.let { error ->
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+                // Validation error message (always reserve space to prevent layout shift)
+                Text(
+                    text = validationError ?: " ",
+                    color = if (validationError != null) MaterialTheme.colorScheme.error else Color.Transparent,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
+                )
 
                 // Buttons
                 Row(

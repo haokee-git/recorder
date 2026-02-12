@@ -1,7 +1,9 @@
 package org.haokee.recorder.ui.component
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Delete
@@ -15,8 +17,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun ThoughtToolbar(
@@ -30,6 +37,7 @@ fun ThoughtToolbar(
     onSetColorClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onFilterClick: () -> Unit,
+    activeFilterCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
@@ -81,17 +89,39 @@ fun ThoughtToolbar(
                 )
             }
 
-            IconButton(
-                onClick = {
-                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    onFilterClick()
+            Box {
+                IconButton(
+                    onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onFilterClick()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FilterList,
+                        contentDescription = "筛选",
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FilterList,
-                    contentDescription = "筛选",
-                    modifier = Modifier.size(18.dp)
-                )
+                if (activeFilterCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = (-4).dp, y = 4.dp)
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.error),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = activeFilterCount.toString(),
+                            color = MaterialTheme.colorScheme.onError,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 9.sp
+                        )
+                    }
+                }
             }
         }
 }

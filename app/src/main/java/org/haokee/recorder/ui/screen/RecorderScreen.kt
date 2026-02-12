@@ -158,6 +158,7 @@ fun RecorderScreen(
         drawerContent = {
             ChatDrawer(
                 viewModel = chatViewModel,
+                isOpen = drawerState.isOpen,
                 onClose = {
                     coroutineScope.launch { drawerState.close() }
                 }
@@ -245,7 +246,8 @@ fun RecorderScreen(
                         onFilterClick = {
                             isDeletePending = false
                             showColorFilter = true
-                        }
+                        },
+                        activeFilterCount = uiState.selectedColors.size
                     )
                     // Selection info bar (always visible)
                     SelectionInfoBar(
@@ -556,10 +558,6 @@ fun RecorderScreen(
         viewModel.clearSelection()
     }
 
-    // Handle back gesture when chat drawer is open (higher priority than selection clearing)
-    BackHandler(enabled = drawerState.isOpen) {
-        coroutineScope.launch { drawerState.close() }
-    }
 }
 
 @Composable
