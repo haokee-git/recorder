@@ -23,8 +23,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.BorderStroke
 import org.haokee.recorder.MainActivity
 import org.haokee.recorder.data.local.ThoughtDatabase
+import org.haokee.recorder.data.repository.SettingsRepository
 import org.haokee.recorder.data.repository.ThoughtRepository
 import org.haokee.recorder.ui.theme.RecorderTheme
 import java.io.File
@@ -61,8 +63,11 @@ class AlarmActivity : ComponentActivity() {
         val thoughtTitle = intent.getStringExtra("thought_title") ?: "感言提醒"
         val thoughtContent = intent.getStringExtra("thought_content") ?: ""
 
+        val settingsRepository = SettingsRepository(applicationContext)
+        val isDarkTheme = settingsRepository.getDarkTheme()
+
         setContent {
-            RecorderTheme {
+            RecorderTheme(darkTheme = isDarkTheme) {
                 AlarmScreen(
                     thoughtId = thoughtId,
                     thoughtTitle = thoughtTitle,
@@ -203,7 +208,8 @@ class AlarmActivity : ComponentActivity() {
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error
-                            )
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,

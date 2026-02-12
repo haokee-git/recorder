@@ -69,8 +69,16 @@ fun ThoughtList(
     var expiredCollapsed by remember { mutableStateOf(false) }
 
     // Handle auto-scroll to newly created/converted thought
-    LaunchedEffect(scrollToThoughtId) {
+    // Depend on thought lists so we retry when data loads
+    LaunchedEffect(scrollToThoughtId, transcribedThoughts, originalThoughts, expiredAlarmThoughts) {
         scrollToThoughtId?.let { targetId ->
+            // Check if the target exists in any list
+            val allLists = transcribedThoughts + originalThoughts + expiredAlarmThoughts
+            if (allLists.none { it.id == targetId }) {
+                // Target not in lists yet, wait for next list update (don't clear)
+                return@let
+            }
+
             // First, expand the section if it's collapsed
             var needsExpand = false
 
@@ -98,34 +106,40 @@ fun ThoughtList(
             // Check in transcribed thoughts
             if (transcribedThoughts.isNotEmpty()) {
                 index++ // Section header
-                val transcribedIndex = transcribedThoughts.indexOfFirst { it.id == targetId }
-                if (transcribedIndex >= 0) {
-                    index += transcribedIndex
-                    found = true
-                } else {
-                    index += transcribedThoughts.size
+                if (!transcribedCollapsed) {
+                    val transcribedIndex = transcribedThoughts.indexOfFirst { it.id == targetId }
+                    if (transcribedIndex >= 0) {
+                        index += transcribedIndex
+                        found = true
+                    } else {
+                        index += transcribedThoughts.size
+                    }
                 }
             }
 
             // Check in original thoughts (only if not found yet)
             if (!found && originalThoughts.isNotEmpty()) {
                 index++ // Section header
-                val originalIndex = originalThoughts.indexOfFirst { it.id == targetId }
-                if (originalIndex >= 0) {
-                    index += originalIndex
-                    found = true
-                } else {
-                    index += originalThoughts.size
+                if (!originalCollapsed) {
+                    val originalIndex = originalThoughts.indexOfFirst { it.id == targetId }
+                    if (originalIndex >= 0) {
+                        index += originalIndex
+                        found = true
+                    } else {
+                        index += originalThoughts.size
+                    }
                 }
             }
 
             // Check in expired alarm thoughts (only if not found yet)
             if (!found && expiredAlarmThoughts.isNotEmpty()) {
                 index++ // Section header
-                val expiredIndex = expiredAlarmThoughts.indexOfFirst { it.id == targetId }
-                if (expiredIndex >= 0) {
-                    index += expiredIndex
-                    found = true
+                if (!expiredCollapsed) {
+                    val expiredIndex = expiredAlarmThoughts.indexOfFirst { it.id == targetId }
+                    if (expiredIndex >= 0) {
+                        index += expiredIndex
+                        found = true
+                    }
                 }
             }
 
@@ -148,10 +162,10 @@ fun ThoughtList(
                     kotlinx.coroutines.delay(50)
                     listState.animateScrollToItem(index)
                 }
-            }
 
-            // Always clear the scroll request
-            onScrollComplete()
+                // Only clear the scroll request when we successfully scrolled
+                onScrollComplete()
+            }
         }
     }
     if (transcribedThoughts.isEmpty() && originalThoughts.isEmpty() && expiredAlarmThoughts.isEmpty()) {

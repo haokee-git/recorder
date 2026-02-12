@@ -1,6 +1,7 @@
 package org.haokee.recorder.ui.screen
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,7 +15,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import org.haokee.recorder.ui.component.BaseUrlSelector
 import org.haokee.recorder.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,6 +28,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val uriHandler = LocalUriHandler.current
 
     // Handle system back gesture (edge swipe) to navigate back
     androidx.activity.compose.BackHandler(onBack = onNavigateBack)
@@ -86,13 +90,17 @@ fun SettingsScreen(
                 )
             }
 
-            // Base URL
-            OutlinedTextField(
-                value = uiState.llmBaseUrl,
-                onValueChange = { viewModel.updateLLMBaseUrl(it) },
-                label = { Text("Base URL") },
-                leadingIcon = { Icon(Icons.Default.Link, null) },
+            // Base URL Preset Selector
+            BaseUrlSelector(
+                presets = uiState.baseUrlPresets,
+                selectedPresetId = uiState.selectedPresetId,
+                isExpanded = uiState.isBaseUrlExpanded,
                 enabled = uiState.llmEnabled,
+                onToggleExpand = { viewModel.toggleBaseUrlExpanded() },
+                onSelectPreset = { viewModel.selectPreset(it) },
+                onEditPreset = { id, name, url -> viewModel.updatePreset(id, name, url) },
+                onDeletePreset = { viewModel.deletePreset(it) },
+                onAddPreset = { name, url -> viewModel.addPreset(name, url) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -102,6 +110,14 @@ fun SettingsScreen(
             OutlinedButton(
                 onClick = { showApiKeyDialog = true },
                 enabled = uiState.llmEnabled,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    if (uiState.llmEnabled) MaterialTheme.colorScheme.outline
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -118,15 +134,57 @@ fun SettingsScreen(
                 label = { Text("模型名称") },
                 leadingIcon = { Icon(Icons.Default.SmartToy, null) },
                 enabled = uiState.llmEnabled,
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
+            // Auto Generate Title Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "自动生成标题",
+                        color = if (uiState.llmEnabled) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
+                    Text(
+                        text = "转换时通过 AI 自动生成标题",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (uiState.llmEnabled) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                    )
+                }
+                Switch(
+                    checked = uiState.autoGenerateTitle,
+                    onCheckedChange = { viewModel.toggleAutoGenerateTitle() },
+                    enabled = uiState.llmEnabled
+                )
+            }
+
             // Test Connection Button
             OutlinedButton(
                 onClick = { viewModel.testLLMConnection() },
                 enabled = uiState.llmEnabled && !uiState.isLoading,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    if (uiState.llmEnabled) MaterialTheme.colorScheme.outline
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -169,6 +227,38 @@ fun SettingsScreen(
                 Switch(
                     checked = uiState.isDarkTheme,
                     onCheckedChange = { viewModel.toggleDarkTheme() }
+                )
+            }
+
+            Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+            // App Settings Section
+            Text(
+                text = "应用设置",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(16.dp)
+            )
+
+            // Auto Start Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("自动启动")
+                    Text(
+                        text = "开机后自动在后台运行，确保提醒不遗漏",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.autoStart,
+                    onCheckedChange = { viewModel.toggleAutoStart(it) }
                 )
             }
 
@@ -228,6 +318,15 @@ fun SettingsScreen(
                 headlineContent = { Text("版本号") },
                 supportingContent = { Text(uiState.appVersion) },
                 leadingContent = { Icon(Icons.Default.Info, null) }
+            )
+
+            ListItem(
+                headlineContent = { Text("作者") },
+                supportingContent = { Text("Haokee") },
+                leadingContent = { Icon(Icons.Default.Person, null) },
+                modifier = Modifier.clickable {
+                    uriHandler.openUri("https://github.com/haokee-git")
+                }
             )
         }
     }

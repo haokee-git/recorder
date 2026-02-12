@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -37,7 +38,8 @@ import kotlin.math.roundToInt
 @Composable
 fun WheelTimePickerDialog(
     onDismiss: () -> Unit,
-    onTimeSelected: (LocalDateTime) -> Unit
+    onTimeSelected: (LocalDateTime) -> Unit,
+    existingAlarmTimes: List<LocalDateTime> = emptyList()
 ) {
     val view = LocalView.current
     val currentTime = LocalDateTime.now()
@@ -48,6 +50,19 @@ fun WheelTimePickerDialog(
     var selectedHour by remember { mutableIntStateOf(currentTime.hour) }
     var selectedMinute by remember { mutableIntStateOf(currentTime.minute) }
     var isDayAdjusting by remember { mutableStateOf(false) }
+
+    // Live "now" that updates every minute for past-time validation
+    var nowMinute by remember { mutableStateOf(LocalDateTime.now().withSecond(0).withNano(0)) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = LocalDateTime.now()
+            val secondsUntilNextMinute = 60 - now.second
+            val nanosUntilNextMinute = 1_000_000_000L - now.nano
+            val millisUntilNextMinute = secondsUntilNextMinute * 1000L + nanosUntilNextMinute / 1_000_000
+            kotlinx.coroutines.delay(millisUntilNextMinute)
+            nowMinute = LocalDateTime.now().withSecond(0).withNano(0)
+        }
+    }
 
     // Calculate days in month (considering leap year)
     val daysInMonth = remember(selectedYear, selectedMonth) {
@@ -67,6 +82,21 @@ fun WheelTimePickerDialog(
             isDayAdjusting = false
         }
     }
+
+    // Time validation
+    val selectedTime = remember(selectedYear, selectedMonth, effectiveDay, selectedHour, selectedMinute) {
+        LocalDateTime.of(selectedYear, selectedMonth, effectiveDay, selectedHour, selectedMinute, 0, 0)
+    }
+    val isPastTime = selectedTime.isBefore(nowMinute) || selectedTime.isEqual(nowMinute)
+    val isTimeConflict = existingAlarmTimes.any { existing ->
+        existing.withSecond(0).withNano(0) == selectedTime
+    }
+    val validationError = when {
+        isPastTime -> "所选时间已过"
+        isTimeConflict -> "该时间已被其他感言占用"
+        else -> null
+    }
+    val isValid = validationError == null
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -181,21 +211,31 @@ fun WheelTimePickerDialog(
                     }
                 }
 
+                // Validation error message
+                validationError?.let { error ->
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
                 // Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
+                    OutlinedButton(
                         onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onDismiss()
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
                     ) {
                         Text("取消")
                     }
@@ -206,7 +246,7 @@ fun WheelTimePickerDialog(
                             val alarmTime = LocalDateTime.of(
                                 selectedYear,
                                 selectedMonth,
-                                selectedDay,
+                                effectiveDay,
                                 selectedHour,
                                 selectedMinute,
                                 0,  // 秒数设为0
@@ -215,6 +255,7 @@ fun WheelTimePickerDialog(
                             onTimeSelected(alarmTime)
                             onDismiss()
                         },
+                        enabled = isValid,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -435,10 +476,12 @@ fun PickerItem(
     // Smooth interpolation for scale (1.0 at center, 0.6 at ±2)
     val scale = (1.0f - absOffset * 0.2f).coerceIn(0.6f, 1.0f)
 
-    // Color interpolation from Black to LightGray
+    // Theme-aware color interpolation
+    val centerColor = MaterialTheme.colorScheme.onSurface
+    val edgeColor = MaterialTheme.colorScheme.onSurfaceVariant
     val color = lerp(
-        Color.Black,
-        Color.LightGray,
+        centerColor,
+        edgeColor,
         (absOffset * 0.4f).coerceIn(0f, 1f)
     )
 

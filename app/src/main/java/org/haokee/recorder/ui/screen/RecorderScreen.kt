@@ -439,10 +439,19 @@ fun RecorderScreen(
 
     // Alarm time picker dialog
     if (showAlarmPicker) {
+        // Collect existing alarm times from non-selected thoughts
+        val existingAlarmTimes = remember(uiState.transcribedThoughts, uiState.originalThoughts, uiState.expiredAlarmThoughts, uiState.selectedThoughts) {
+            val allThoughts = uiState.transcribedThoughts + uiState.originalThoughts + uiState.expiredAlarmThoughts
+            allThoughts
+                .filter { it.id !in uiState.selectedThoughts && it.alarmTime != null }
+                .mapNotNull { it.alarmTime }
+        }
+
         WheelTimePickerDialog(
             onDismiss = {
                 showAlarmPicker = false
             },
+            existingAlarmTimes = existingAlarmTimes,
             onTimeSelected = { alarmTime ->
                 // 先检查精确闹钟权限
                 if (!org.haokee.recorder.alarm.AlarmHelper.hasAlarmPermission(context)) {

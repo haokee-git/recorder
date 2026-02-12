@@ -1011,3 +1011,131 @@ AI 没有输出任何内容时（如出错返回空内容），气泡下方不�
 
 #### 影响文件
 - ChatDrawer.kt: AssistantMessageBubble 按钮显示逻辑和复制提示
+
+---
+
+### 2026-02-12 - Base URL 预设端口功能
+
+#### 需求背景
+用户需要快速切换不同 LLM 服务商的 Base URL，而不是每次手动输入完整地址。
+
+#### 具体需求
+
+**1. 内置预设（不可删除）**
+- OpenAI: https://api.openai.com/v1/
+- Anthropic: https://api.anthropic.com/v1/
+- Google Gemini: https://generativelanguage.googleapis.com/v1beta/openai/
+- DeepSeek: https://api.deepseek.com/v1/
+- 默认选择 OpenAI
+
+**2. UI 交互**
+- 折叠态：显示当前选中的预设名称和 URL，点击展开
+- 展开态：带动画展开列表，用户可滑动选择
+- 列表底部："新建 Base URL" 按钮
+- 新建弹窗：填写名称和 URL，确认后自动选中并折叠
+
+**3. 编辑与删除**
+- 所有预设的 URL 均可编辑（包括内置预设）
+- 只有用户自定义的预设可以删除
+- 所有数据保存到本地（JSON + SharedPreferences）
+
+#### 技术实现
+- 数据模型：`BaseUrlPreset`（id, name, url, isBuiltIn）
+- 持久化：Gson JSON 序列化存储在 SharedPreferences
+- 向后兼容：`getLLMBaseUrl()` 从选中预设派生，LLMClient 无需改动
+- 迁移逻辑：旧 `llm_base_url` 自动匹配内置预设或创建自定义预设
+- UI 动画：`AnimatedVisibility` + `expandVertically`（200ms tween）
+
+#### 影响文件
+- 新建 BaseUrlPreset.kt: 数据模型
+- 新建 BaseUrlSelector.kt: UI 组件
+- 修改 SettingsRepository.kt: 预设持久化方法
+- 修改 SettingsViewModel.kt: 预设状态管理
+- 修改 SettingsScreen.kt: 替换 OutlinedTextField 为 BaseUrlSelector
+
+---
+
+### 2026-02-12 - 前台服务保活
+
+#### 需求背景
+防止应用在后台被系统杀死，确保闹钟提醒和录音功能的可靠性。
+
+#### 技术方案
+使用前台服务 (Foreground Service) 保持应用运行状态，降低被系统回收的概率。
+
+#### 实现
+- 新建 `KeepAliveService.kt`：前台服务，显示低优先级常驻通知"Recorder 运行中"
+- `START_STICKY`：服务被杀后系统会尝试重新创建
+- 通知渠道 `IMPORTANCE_LOW`：不发声、不振动、不弹出
+- `foregroundServiceType="specialUse"`：适配 Android 14+ (targetSdk 36)
+- MainActivity `onCreate()` 启动服务，`onDestroy()` 停止服务
+
+#### 影响文件
+- 新建 service/KeepAliveService.kt
+- 修改 AndroidManifest.xml: 添加权限和服务声明
+- 修改 MainActivity.kt: 启动/停止服务
+
+---
+
+### 2026-02-12 - 四项设置与交互优化
+
+#### 1. 自动生成标题 Toggle
+- 在"大模型 API 设置"下方新增"自动生成标题"开关
+- 启用时：转换感言时通过 AI 生成标题（原有逻辑）
+- 禁用时：截取前缀作为标题（fallback 逻辑）
+- 受"启用大模型功能"总开关控制（禁用时灰色不可点）
+
+#### 2. 感言内容完整显示
+- 移除 TranscribedThoughtItem 和 ExpiredThoughtItem 的 `maxLines = 2` 和 `TextOverflow.Ellipsis`
+- 长文本完整显示，排版不变
+
+#### 3. BaseUrlSelector 禁用态边框修复
+- 禁用时边框改为 `outline.copy(alpha = 0.38f)`（灰色）
+- 与其他子元素禁用态视觉一致
+
+#### 4. 应用设置 — 自动启动
+- 新增"应用设置"栏目（位于"界面设置"与"数据管理"之间）
+- "自动启动"开关：开机后自动在后台运行 KeepAliveService
+- 新建 BootReceiver：监听 BOOT_COMPLETED，读取设置决定是否启动前台服务
+
+#### 影响文件
+- 修改 SettingsRepository.kt: 新增 autoGenerateTitle / autoStart 键
+- 修改 SettingsViewModel.kt: 新增状态字段和 toggle 方法
+- 修改 SettingsScreen.kt: 新增两个 Toggle + 应用设置栏目
+- 修改 SpeechToTextHelper.kt: generateTitle 增加 autoGenerateTitle 检查
+- 修改 ThoughtItem.kt: 移除 maxLines/Ellipsis
+- 修改 BaseUrlSelector.kt: 禁用态边框透明度
+- 新建 BootReceiver.kt: 开机广播接收器
+- 修改 AndroidManifest.xml: RECEIVE_BOOT_COMPLETED 权限 + BootReceiver 声明
+
+---
+
+### 2026-02-12 - 四项交互与暗色模式修复
+
+#### 1. 作者链接
+- 设置页"关于"中的作者 ListItem 可点击，打开浏览器跳转到 https://github.com/haokee-git
+
+#### 2. 暗色模式适配：时间选择器 + 闹钟弹窗
+- WheelTimePickerDialog 中 PickerItem 的文字颜色从硬编码 `Color.Black`/`Color.LightGray` 改为主题感知
+- WheelTimePickerDialog "取消"按钮从填充蓝色改为浅红色边框的 OutlinedButton
+- AlarmActivity 读取用户暗色主题设置传给 RecorderTheme
+- AlarmActivity "关闭"按钮添加显式红色边框 `BorderStroke(1.dp, error)`
+
+#### 3. 闹钟弹窗"查看详情"滚动定位修复
+- ThoughtList.kt：scrollToThoughtId 的 LaunchedEffect 增加思想列表依赖
+- 目标不在列表中时不清除 scrollToThoughtId，等待数据加载后重试
+- 确保折叠区域自动展开 + 带动画滚动
+
+#### 4. 时间选择器增加校验
+- 目标时间 < 当前时间时，红色提示"所选时间已过"，每整分钟重新检查
+- 其他感言已占用同一时间时，红色提示"该时间已被其他感言占用"
+- 校验不通过时"确定"按钮灰色禁用
+- WheelTimePickerDialog 新增 `existingAlarmTimes` 参数
+- RecorderScreen 传入当前所有非选中感言的闹钟时间
+
+#### 影响文件
+- SettingsScreen.kt: 作者 ListItem 可点击
+- WheelTimePickerDialog.kt: 暗色模式颜色 + 取消按钮样式 + 时间校验
+- AlarmActivity.kt: 暗色主题 + 关闭按钮边框
+- ThoughtList.kt: 滚动定位重试逻辑
+- RecorderScreen.kt: 传递 existingAlarmTimes 给时间选择器

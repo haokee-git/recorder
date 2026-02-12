@@ -1795,4 +1795,117 @@ fun chatStream(
 
 ---
 
-*最后更新: 2026-02-11*
+### 2026-02-12 开发成果 - Base URL 预设端口功能
+
+完成了 Base URL 预设选择器功能，替换原来的简单文本输入框，支持内置预设和用户自定义 URL。
+
+#### 新增文件
+
+1. **BaseUrlPreset.kt** — 数据模型
+   - `id`, `name`, `url`, `isBuiltIn` 字段
+   - 4 个内置预设：OpenAI、Anthropic、Google Gemini、DeepSeek
+   - 固定 ID（`preset_openai` 等）确保跨重启稳定
+
+2. **BaseUrlSelector.kt** — UI 组件
+   - 折叠态：Surface 卡片显示选中预设名称和 URL
+   - 展开态：AnimatedVisibility + expandVertically（200ms）
+   - 每行：RadioButton + 名称 + URL + 编辑/删除图标
+   - 底部"新建 Base URL"按钮
+   - 编辑/新建对话框（AlertDialog + OutlinedTextField）
+
+#### 修改文件
+
+3. **SettingsRepository.kt** — 持久化
+   - Gson JSON 序列化存储预设列表到 SharedPreferences
+   - `getBaseUrlPresets()` / `saveBaseUrlPresets()` / `getSelectedPresetId()` / `setSelectedPresetId()`
+   - `getLLMBaseUrl()` 重构为从选中预设派生 URL
+   - `migrateAndInitPresets()` 旧数据迁移逻辑
+   - 自动合并缺失的内置预设（未来新增预设自动出现）
+
+4. **SettingsViewModel.kt** — 状态管理
+   - UiState 新增：`baseUrlPresets`, `selectedPresetId`, `isBaseUrlExpanded`
+   - 新增方法：`toggleBaseUrlExpanded()`, `selectPreset()`, `addPreset()`, `updatePreset()`, `deletePreset()`
+   - 移除 `updateLLMBaseUrl()` — 被新方法替代
+
+5. **SettingsScreen.kt** — UI 集成
+   - 替换 OutlinedTextField 为 BaseUrlSelector 组件
+
+#### 技术特点
+- 向后兼容：LLMClient 无需改动，`getLLMBaseUrl()` 自动从选中预设派生
+- 迁移逻辑：旧 `llm_base_url` 自动匹配内置预设或创建自定义预设
+- 内置预设不可删除但 URL 可编辑
+- 用户自定义预设可编辑名称/URL、可删除
+- 删除当前选中预设时自动回退到第一个预设
+
+---
+
+### 2026-02-12 开发成果 - 四项交互与暗色模式修复
+
+完成了四项关键功能改进，包括作者链接、时间选择器暗色适配、闹钟弹窗定位修复和时间校验功能。
+
+#### 1. 作者链接开放 ✅
+
+**SettingsScreen.kt** - 作者 ListItem 可点击：
+- 添加 `LocalUriHandler` 支持
+- `Modifier.clickable { uriHandler.openUri("https://github.com/haokee-git") }`
+- 点击跳转到 GitHub 个人主页
+
+#### 2. 暗色模式适配（时间选择器 + 闹钟弹窗）✅
+
+**WheelTimePickerDialog.kt - PickerItem 暗色颜色**：
+- 替换硬编码 `Color.Black`/`Color.LightGray`
+- 改用 `MaterialTheme.colorScheme.onSurface`/`onSurfaceVariant`
+- 在暗色模式下正确显示
+
+**WheelTimePickerDialog.kt - 取消按钮样式**：
+- 从填充蓝色 `Button` 改为 `OutlinedButton`
+- 使用 `error` 颜色和 0.5 透明度边框（浅红色）
+- 与"确定"按钮视觉对比更明显
+
+**AlarmActivity.kt - 暗色主题**：
+- 读取 `SettingsRepository.getDarkTheme()` 用户设置
+- 传给 `RecorderTheme(darkTheme = isDarkTheme)`
+- 闹钟弹窗自动适配用户选择的主题
+- "关闭"按钮添加显式红色边框 `BorderStroke(1.dp, error.copy(alpha = 0.5f))`
+
+#### 3. 闹钟弹窗定位修复 ✅
+
+**ThoughtList.kt - 滚动定位重试逻辑**：
+- `LaunchedEffect` 现在依赖 `scrollToThoughtId` 和三个思想列表
+- 如果目标思想不在列表中（数据还在加载），不清除 `scrollToThoughtId`，等待下一次数据更新
+- 只有在目标找到并成功滚动后才清除请求
+- 确保闹钟弹窗 "查看详情" 总能定位到对应感言
+
+#### 4. 时间选择器增加校验 ✅
+
+**WheelTimePickerDialog.kt - 时间校验**：
+- 新增 `existingAlarmTimes: List<LocalDateTime> = emptyList()` 参数
+- 实时 `nowMinute` 状态，每整分钟更新一次用于过时检测
+- 两个校验规则：
+  - `isPastTime`：目标时间 ≤ 当前时间 → 红字提示"所选时间已过"
+  - `isTimeConflict`：其他感言占用同一时间 → 红字提示"该时间已被其他感言占用"
+- 校验不通过时"确定"按钮灰色禁用
+- 验证错误文本显示在时间选择器下方
+
+**RecorderScreen.kt - 传递现有时间**：
+- 收集所有非选中感言的闹钟时间
+- `remember` 缓存列表，依赖于思想列表和选中状态
+- 传入 `WheelTimePickerDialog` 的 `existingAlarmTimes` 参数
+
+#### 影响文件
+- ✅ SettingsScreen.kt: 作者链接
+- ✅ WheelTimePickerDialog.kt: 暗色颜色 + 取消按钮样式 + 时间校验 + nowMinute 更新
+- ✅ AlarmActivity.kt: 暗色主题 + 关闭按钮边框
+- ✅ ThoughtList.kt: 滚动定位重试逻辑
+- ✅ RecorderScreen.kt: 传递 existingAlarmTimes
+
+#### 效果
+- ✅ 用户可点击作者名称打开 GitHub 主页
+- ✅ 时间选择器在暗色模式下清晰可读（文字颜色适配）
+- ✅ 闹钟弹窗自动跟随用户主题设置
+- ✅ 过去时间和时间冲突实时提示，确定按钮相应禁用
+- ✅ 闹钟通知点击后总能滚动定位到对应感言
+
+---
+
+*最后更新: 2026-02-12*
