@@ -23,6 +23,7 @@ import org.haokee.recorder.data.local.ThoughtDatabase
 import org.haokee.recorder.data.repository.ChatRepository
 import org.haokee.recorder.data.repository.SettingsRepository
 import org.haokee.recorder.data.repository.ThoughtRepository
+import org.haokee.recorder.ui.screen.OnboardingScreen
 import org.haokee.recorder.ui.screen.RecorderScreen
 import org.haokee.recorder.ui.screen.SettingsScreen
 import org.haokee.recorder.ui.theme.RecorderTheme
@@ -30,12 +31,15 @@ import org.haokee.recorder.ui.viewmodel.ChatViewModel
 import org.haokee.recorder.ui.viewmodel.SettingsViewModel
 import org.haokee.recorder.ui.viewmodel.ThoughtListViewModel
 import org.haokee.recorder.ui.viewmodel.ThoughtViewModelFactory
+import org.haokee.recorder.service.KeepAliveService
 
 class MainActivity : ComponentActivity() {
     private lateinit var thoughtViewModel: ThoughtListViewModel
     private lateinit var settingsViewModel: SettingsViewModel
     private lateinit var chatViewModel: ChatViewModel
+    private lateinit var settingsRepository: SettingsRepository
     private var currentScreen by mutableStateOf(Screen.RECORDER)
+    private var showOnboarding by mutableStateOf(false)
 
     enum class Screen {
         RECORDER,
@@ -53,7 +57,7 @@ class MainActivity : ComponentActivity() {
             android.util.Log.d("MainActivity", "Initializing database...")
             val database = ThoughtDatabase.getDatabase(applicationContext)
             val thoughtRepository = ThoughtRepository(database.thoughtDao(), applicationContext)
-            val settingsRepository = SettingsRepository(applicationContext)
+            settingsRepository = SettingsRepository(applicationContext)
             val audioRecorder = AudioRecorder()
             val audioPlayer = AudioPlayer()
 
@@ -71,6 +75,12 @@ class MainActivity : ComponentActivity() {
 
             android.util.Log.d("MainActivity", "ViewModels created successfully")
 
+            // Start foreground service to keep app alive
+            KeepAliveService.start(applicationContext)
+
+            // Check if onboarding needs to be shown
+            showOnboarding = !settingsRepository.isOnboardingCompleted()
+
             // Handle notification click (from alarm)
             handleNotificationIntent(intent)
         } catch (e: Exception) {
@@ -81,31 +91,40 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settingsState by settingsViewModel.uiState.collectAsState()
             RecorderTheme(darkTheme = settingsState.isDarkTheme) {
-                val slideOffset by animateFloatAsState(
-                    targetValue = if (currentScreen == Screen.SETTINGS) 1f else 0f,
-                    animationSpec = tween(300),
-                    label = "screenSlide"
-                )
-
-                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val widthPx = constraints.maxWidth.toFloat()
-
-                    RecorderScreen(
-                        viewModel = thoughtViewModel,
-                        chatViewModel = chatViewModel,
-                        onSettingsClick = { currentScreen = Screen.SETTINGS },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .offset { IntOffset((-widthPx * slideOffset).roundToInt(), 0) }
+                if (showOnboarding) {
+                    OnboardingScreen(
+                        onFinish = {
+                            settingsRepository.setOnboardingCompleted()
+                            showOnboarding = false
+                        }
+                    )
+                } else {
+                    val slideOffset by animateFloatAsState(
+                        targetValue = if (currentScreen == Screen.SETTINGS) 1f else 0f,
+                        animationSpec = tween(300),
+                        label = "screenSlide"
                     )
 
-                    SettingsScreen(
-                        viewModel = settingsViewModel,
-                        onNavigateBack = { currentScreen = Screen.RECORDER },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .offset { IntOffset((widthPx * (1f - slideOffset)).roundToInt(), 0) }
-                    )
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val widthPx = constraints.maxWidth.toFloat()
+
+                        RecorderScreen(
+                            viewModel = thoughtViewModel,
+                            chatViewModel = chatViewModel,
+                            onSettingsClick = { currentScreen = Screen.SETTINGS },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .offset { IntOffset((-widthPx * slideOffset).roundToInt(), 0) }
+                        )
+
+                        SettingsScreen(
+                            viewModel = settingsViewModel,
+                            onNavigateBack = { currentScreen = Screen.RECORDER },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .offset { IntOffset((widthPx * (1f - slideOffset)).roundToInt(), 0) }
+                        )
+                    }
                 }
             }
         }
@@ -125,6 +144,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        KeepAliveService.stop(applicationContext)
         thoughtViewModel.audioRecorder.release()
         thoughtViewModel.audioPlayer.release()
     }
