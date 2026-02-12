@@ -17,7 +17,13 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:k2-fsa.github.io)",
       "Bash(ls:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(find:*)",
+      "Bash(git lfs:*)",
+      "Bash(git push:*)",
+      "Bash(git config lfs.https://REMOVED@github.com/haokee-git/recorder.git/info/lfs.locksverify false)",
+      "Bash(ren:*)",
+      "Bash(git reset:*)"
     ]
   },
   "outputStyle": "default"
