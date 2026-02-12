@@ -200,6 +200,60 @@ fun SettingsScreen(
 
             Divider(modifier = Modifier.padding(vertical = 16.dp))
 
+            // Alarm Settings Section
+            Text(
+                text = "提醒设置",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(16.dp)
+            )
+
+            // Alarm Sound Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("提醒声音")
+                    Text(
+                        text = "提醒触发时播放声音",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.alarmSound,
+                    onCheckedChange = { viewModel.toggleAlarmSound(it) }
+                )
+            }
+
+            // Alarm Vibration Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("提醒振动")
+                    Text(
+                        text = "提醒触发时振动",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.alarmVibration,
+                    onCheckedChange = { viewModel.toggleAlarmVibration(it) }
+                )
+            }
+
+            Divider(modifier = Modifier.padding(vertical = 16.dp))
+
             // UI Settings Section
             Text(
                 text = "界面设置",

@@ -4,6 +4,9 @@ import android.content.Intent
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -36,6 +39,7 @@ import androidx.compose.material.icons.filled.Info
 
 class AlarmActivity : ComponentActivity() {
     private var mediaPlayer: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
     private lateinit var repository: ThoughtRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +69,8 @@ class AlarmActivity : ComponentActivity() {
 
         val settingsRepository = SettingsRepository(applicationContext)
         val isDarkTheme = settingsRepository.getDarkTheme()
+        val soundEnabled = settingsRepository.getAlarmSound()
+        val vibrationEnabled = settingsRepository.getAlarmVibration()
 
         setContent {
             RecorderTheme(darkTheme = isDarkTheme) {
@@ -78,8 +84,15 @@ class AlarmActivity : ComponentActivity() {
             }
         }
 
-        // Start playing audio
-        startPlayingAudio(thoughtId)
+        // Start playing audio if sound is enabled
+        if (soundEnabled) {
+            startPlayingAudio(thoughtId)
+        }
+
+        // Start vibration if enabled
+        if (vibrationEnabled) {
+            startVibration()
+        }
     }
 
     @Composable
@@ -280,6 +293,29 @@ class AlarmActivity : ComponentActivity() {
         }
     }
 
+    private fun startVibration() {
+        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
+        }
+
+        val pattern = longArrayOf(0, 500, 200, 500, 200, 500, 1000)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(pattern, 0)
+        }
+    }
+
+    private fun stopVibration() {
+        vibrator?.cancel()
+        vibrator = null
+    }
+
     private fun stopAudio() {
         mediaPlayer?.let {
             if (it.isPlaying) {
@@ -292,11 +328,13 @@ class AlarmActivity : ComponentActivity() {
 
     private fun finishActivity() {
         stopAudio()
+        stopVibration()
         finish()
     }
 
     private fun viewThoughtDetail(thoughtId: String) {
         stopAudio()
+        stopVibration()
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -309,5 +347,6 @@ class AlarmActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopAudio()
+        stopVibration()
     }
 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.haokee.recorder.data.model.BaseUrlPreset
 import org.haokee.recorder.data.repository.ChatRepository
 import org.haokee.recorder.data.repository.SettingsRepository
 import org.haokee.recorder.data.repository.ThoughtRepository
@@ -21,7 +22,14 @@ data class SettingsUiState(
     val showTestDialog: Boolean = false,
     val testResult: String? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val baseUrlPresets: List<BaseUrlPreset> = emptyList(),
+    val selectedPresetId: String = "",
+    val isBaseUrlExpanded: Boolean = false,
+    val autoGenerateTitle: Boolean = true,
+    val autoStart: Boolean = false,
+    val alarmSound: Boolean = true,
+    val alarmVibration: Boolean = true
 )
 
 class SettingsViewModel(
@@ -40,15 +48,25 @@ class SettingsViewModel(
     }
 
     private fun loadSettings() {
+        val presets = settingsRepository.getBaseUrlPresets()
+        val selectedId = settingsRepository.getSelectedPresetId()
+        val selectedUrl = presets.find { it.id == selectedId }?.url ?: ""
+
         _uiState.update {
             it.copy(
                 llmEnabled = settingsRepository.getLLMEnabled(),
-                llmBaseUrl = settingsRepository.getLLMBaseUrl(),
+                llmBaseUrl = selectedUrl,
                 llmApiKey = settingsRepository.getLLMApiKey(),
                 llmModel = settingsRepository.getLLMModel(),
                 isDarkTheme = settingsRepository.getDarkTheme(),
                 appVersion = settingsRepository.getAppVersion(),
-                isLLMConfigured = settingsRepository.isLLMConfigured()
+                isLLMConfigured = settingsRepository.isLLMConfigured(),
+                baseUrlPresets = presets,
+                selectedPresetId = selectedId,
+                autoGenerateTitle = settingsRepository.getAutoGenerateTitle(),
+                autoStart = settingsRepository.getAutoStart(),
+                alarmSound = settingsRepository.getAlarmSound(),
+                alarmVibration = settingsRepository.getAlarmVibration()
             )
         }
     }
@@ -66,9 +84,73 @@ class SettingsViewModel(
         _uiState.update { it.copy(llmEnabled = enabled) }
     }
 
-    fun updateLLMBaseUrl(url: String) {
-        settingsRepository.setLLMBaseUrl(url)
-        _uiState.update { it.copy(llmBaseUrl = url) }
+    // Base URL Preset management
+    fun toggleBaseUrlExpanded() {
+        _uiState.update { it.copy(isBaseUrlExpanded = !it.isBaseUrlExpanded) }
+    }
+
+    fun selectPreset(presetId: String) {
+        settingsRepository.setSelectedPresetId(presetId)
+        val url = _uiState.value.baseUrlPresets.find { it.id == presetId }?.url ?: ""
+        _uiState.update {
+            it.copy(
+                selectedPresetId = presetId,
+                llmBaseUrl = url,
+                isBaseUrlExpanded = false
+            )
+        }
+    }
+
+    fun addPreset(name: String, url: String) {
+        val newPreset = BaseUrlPreset(name = name, url = url)
+        val updated = _uiState.value.baseUrlPresets + newPreset
+        settingsRepository.saveBaseUrlPresets(updated)
+        settingsRepository.setSelectedPresetId(newPreset.id)
+        _uiState.update {
+            it.copy(
+                baseUrlPresets = updated,
+                selectedPresetId = newPreset.id,
+                llmBaseUrl = url,
+                isBaseUrlExpanded = false
+            )
+        }
+    }
+
+    fun updatePreset(presetId: String, name: String, url: String) {
+        val updated = _uiState.value.baseUrlPresets.map {
+            if (it.id == presetId) it.copy(name = if (it.isBuiltIn) it.name else name, url = url) else it
+        }
+        settingsRepository.saveBaseUrlPresets(updated)
+        _uiState.update { state ->
+            state.copy(
+                baseUrlPresets = updated,
+                llmBaseUrl = if (state.selectedPresetId == presetId) url else state.llmBaseUrl
+            )
+        }
+    }
+
+    fun deletePreset(presetId: String) {
+        val preset = _uiState.value.baseUrlPresets.find { it.id == presetId } ?: return
+        if (preset.isBuiltIn) return
+        val updated = _uiState.value.baseUrlPresets.filter { it.id != presetId }
+        settingsRepository.saveBaseUrlPresets(updated)
+
+        // If deleted the selected one, fall back to first preset
+        val newSelectedId = if (_uiState.value.selectedPresetId == presetId) {
+            val fallbackId = updated.firstOrNull()?.id ?: BaseUrlPreset.DEFAULT_SELECTED_ID
+            settingsRepository.setSelectedPresetId(fallbackId)
+            fallbackId
+        } else {
+            _uiState.value.selectedPresetId
+        }
+        val newUrl = updated.find { it.id == newSelectedId }?.url ?: ""
+        _uiState.update {
+            it.copy(
+                baseUrlPresets = updated,
+                selectedPresetId = newSelectedId,
+                llmBaseUrl = newUrl
+            )
+        }
     }
 
     fun updateLLMApiKey(apiKey: String) {
@@ -90,6 +172,27 @@ class SettingsViewModel(
         val newValue = !_uiState.value.isDarkTheme
         settingsRepository.setDarkTheme(newValue)
         _uiState.update { it.copy(isDarkTheme = newValue) }
+    }
+
+    fun toggleAutoGenerateTitle() {
+        val newValue = !_uiState.value.autoGenerateTitle
+        settingsRepository.setAutoGenerateTitle(newValue)
+        _uiState.update { it.copy(autoGenerateTitle = newValue) }
+    }
+
+    fun toggleAutoStart(enabled: Boolean) {
+        settingsRepository.setAutoStart(enabled)
+        _uiState.update { it.copy(autoStart = enabled) }
+    }
+
+    fun toggleAlarmSound(enabled: Boolean) {
+        settingsRepository.setAlarmSound(enabled)
+        _uiState.update { it.copy(alarmSound = enabled) }
+    }
+
+    fun toggleAlarmVibration(enabled: Boolean) {
+        settingsRepository.setAlarmVibration(enabled)
+        _uiState.update { it.copy(alarmVibration = enabled) }
     }
 
     fun testLLMConnection() {

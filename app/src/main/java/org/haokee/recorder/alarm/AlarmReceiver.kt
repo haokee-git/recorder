@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import org.haokee.recorder.MainActivity
 import org.haokee.recorder.R
 import org.haokee.recorder.data.local.ThoughtDatabase
+import org.haokee.recorder.data.repository.SettingsRepository
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -92,12 +93,12 @@ class AlarmReceiver : BroadcastReceiver() {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // 使用新的 CHANNEL_ID
-        val channelId = "thought_alarm_channel_v3"
+        val settings = SettingsRepository(context)
+        val soundEnabled = settings.getAlarmSound()
+        val vibrationEnabled = settings.getAlarmVibration()
 
-        // Get default alarm sound
-        val alarmSound: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        // Dynamic channel ID based on sound/vibration settings
+        val channelId = "thought_alarm_s${if (soundEnabled) 1 else 0}_v${if (vibrationEnabled) 1 else 0}"
 
         // Create notification channel for Android O and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -107,21 +108,31 @@ class AlarmReceiver : BroadcastReceiver() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "感言闹钟提醒"
-                enableVibration(true)
                 enableLights(true)
                 setShowBadge(true)
-                // Set alarm sound to the channel
-                val audioAttributes = AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .build()
-                setSound(alarmSound, audioAttributes)
+
+                if (soundEnabled) {
+                    val alarmSound: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    val audioAttributes = AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .build()
+                    setSound(alarmSound, audioAttributes)
+                } else {
+                    setSound(null, null)
+                }
+
+                enableVibration(vibrationEnabled)
+                if (!vibrationEnabled) {
+                    vibrationPattern = longArrayOf(0)
+                }
             }
             notificationManager.createNotificationChannel(channel)
         }
 
         // Build notification with full-screen intent
-        val notification = NotificationCompat.Builder(context, channelId)
+        val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
             .setContentText("点击查看您的感言")
@@ -129,15 +140,14 @@ class AlarmReceiver : BroadcastReceiver() {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
             .setContentIntent(fullScreenPendingIntent)
-            .setFullScreenIntent(fullScreenPendingIntent, true) // 全屏意图
-            .setOngoing(true) // 设置为 ongoing，不能轻易关闭
+            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .build()
 
-        notificationManager.notify(thoughtId.hashCode(), notification)
-    }
+        if (!soundEnabled) {
+            builder.setSilent(true)
+        }
 
-    companion object {
-        private const val CHANNEL_ID = "thought_alarm_channel_v3"
+        notificationManager.notify(thoughtId.hashCode(), builder.build())
     }
 }
