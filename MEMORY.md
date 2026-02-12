@@ -1908,4 +1908,114 @@ fun chatStream(
 
 ---
 
+### 2026-02-12 开发成果 - 提醒设置（声音与振动开关）
+
+在设置页新增"提醒设置"栏目（位于大模型 API 设置与界面设置之间），包含两个 Toggle 开关。
+
+#### 实现
+
+**SettingsRepository.kt** — 新增键：
+- `alarm_sound`（默认 true）: 控制闹钟是否播放声音
+- `alarm_vibration`（默认 true）: 控制闹钟是否振动
+
+**SettingsViewModel.kt** — UiState 新增 `alarmSound` / `alarmVibration`，新增 `toggleAlarmSound()` / `toggleAlarmVibration()`
+
+**SettingsScreen.kt** — "提醒设置"栏目，两个 Switch 开关，主题感知颜色
+
+**AlarmReceiver.kt** — 根据设置动态生成 channel ID（`thought_alarm_s1_v1` 等 4 种组合），声音关闭时 `setSound(null, null)` + `setSilent(true)`，振动关闭时 `enableVibration(false)`
+
+**AlarmActivity.kt** — 读取设置：
+- 声音关闭 → 不播放感言音频
+- 振动开启 → 手动调用 `Vibrator` 循环振动（`[0, 500, 200, 500, 200, 500, 1000]`）
+- 关闭/查看详情/onDestroy 时停止振动
+
+#### Git 提交
+- `196029e` - 提醒设置：声音与振动开关，闹钟行为联动
+
+---
+
+### 2026-02-12 开发成果 - UI 细节优化
+
+#### 1. 时间选择器校验占位 ✅
+- **问题**：校验提示出现/消失时页面高度变化，滚动不跟手
+- **修复**：将 `validationError?.let { Text(...) }` 改为始终渲染的 `Text`，无错误时用空格占位 + `Color.Transparent`
+
+#### 2. 筛选按钮红点徽章 ✅
+- ThoughtToolbar 新增 `activeFilterCount` 参数
+- 筛选启用时右上角显示 14dp 红色圆形徽章（`error` 色），内部 9sp 白色粗体数字
+- RecorderScreen 传入 `uiState.selectedColors.size`
+
+#### 3. 暗色模式状态栏适配 ✅
+- Theme.kt 添加 `SideEffect` + `WindowCompat.getInsetsController`
+- 暗色：`isAppearanceLightStatusBars = false`（白色图标）
+- 亮色：`isAppearanceLightStatusBars = true`（深色图标）
+
+#### Git 提交
+- `0a5f2f9` - 时间选择器校验占位 + 筛选按钮红点徽章
+- `76cb9e3` - 暗色模式状态栏文字颜色适配
+
+---
+
+### 2026-02-12 开发成果 - 首次启动引导页
+
+首次安装应用时展示 7 页引导，介绍核心功能截图。
+
+#### 实现
+
+**图片重命名** — 7 张中文名截图重命名为合法 Android 资源名：
+- `onboarding_list.jpg` / `onboarding_categories.jpg` / `onboarding_color.jpg`
+- `onboarding_filter.jpg` / `onboarding_alarm.jpg` / `onboarding_ai_chat.jpg`
+- `onboarding_dark_mode.jpg`
+
+**OnboardingScreen.kt** — 新建引导页 UI：
+- 7 页内容：上方圆角裁剪图片，下方文艺标题 + 副标题
+- 页面内容：
+  1. 一键录音，留住灵感
+  2. 井然有序，分类归档
+  3. 色彩标记，赋予意义
+  4. 精准筛选，快速定位
+  5. 定时提醒，不再遗忘
+  6. AI 相伴，智慧对话
+  7. 暗夜模式，温柔护眼
+- 圆点指示器：当前页 10dp 亮蓝色（`0xFF64B5F6`），其他页 6dp 灰色，200ms 动画
+- 左下"跳过"、右下"继续"/"开始使用"按钮
+- `systemBarsPadding()` 适配
+
+**SettingsRepository.kt** — 新增 `onboarding_completed` 键
+
+**MainActivity.kt** — `showOnboarding` 状态，首次显示引导页，点击跳过/开始使用后标记完成
+
+#### Git 提交
+- `af4c70d` - 首次启动引导页：7 页功能展示 + 圆点指示器
+
+---
+
+### 2026-02-12 开发成果 - AI 对话侧边滑动返回修复
+
+#### 问题
+在 AI 对话界面使用系统侧边滑动返回手势无法退回主界面。
+
+#### 原因
+`BackHandler` 放在 `ModalNavigationDrawer` 的 `content` lambda 中，但 `drawerContent` 在组合树中优先级更高，系统返回手势无法到达 `content` 中的处理器。
+
+#### 解决方案
+- **ChatDrawer.kt** 新增 `isOpen: Boolean` 参数
+- `BackHandler(enabled = isOpen, onBack = onClose)` 置于 `drawerContent` 作用域
+- 移除 RecorderScreen 中冗余的 drawer BackHandler
+- 保留 `gesturesEnabled` 默认值 true，不破坏应用内拖拽关闭手势
+
+#### Git 提交
+- `7f927bc` - 修复 AI 对话侧边滑动返回手势
+
+---
+
+### 2026-02-12 开发成果 - Base URL 预设 + 前台服务保活 + 开机自启等
+
+（此批功能在本次会话之前已实现，本次会话中补充提交）
+
+#### Git 提交
+- `8c6dbdb` - Base URL 预设、前台服务保活、开机自启、自动生成标题开关、感言完整显示
+
+---
+
 *最后更新: 2026-02-12*
