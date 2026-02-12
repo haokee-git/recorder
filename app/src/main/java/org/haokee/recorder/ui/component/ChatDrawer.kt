@@ -45,6 +45,7 @@ import org.haokee.recorder.ui.viewmodel.ChatViewModel
 @Composable
 fun ChatDrawer(
     viewModel: ChatViewModel,
+    isOpen: Boolean = false,
     onClose: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -59,6 +60,9 @@ fun ChatDrawer(
             listState.scrollToItem(uiState.messages.size - 1)
         }
     }
+
+    // Intercept system back gesture to close the drawer (only when open)
+    androidx.activity.compose.BackHandler(enabled = isOpen, onBack = onClose)
 
     Surface(
         modifier = modifier.fillMaxSize(),
