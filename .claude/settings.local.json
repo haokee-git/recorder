@@ -22,7 +22,8 @@
       "Bash(git lfs:*)",
       "Bash(git push:*)",
       "Bash(ren:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(GIT_SEQUENCE_EDITOR=\"sed -i ''s/^pick 33d810a/edit 33d810a/''\" git rebase -i 33d810a~1)"
     ]
   },
   "outputStyle": "default"
