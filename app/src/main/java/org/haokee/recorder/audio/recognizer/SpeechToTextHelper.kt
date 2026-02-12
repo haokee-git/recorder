@@ -123,10 +123,11 @@ class SpeechToTextHelper(
      * Generate a title using LLM if available, otherwise use simple extraction
      */
     private suspend fun generateTitle(text: String): String {
-        // Check if LLM is enabled and configured
+        // Check if LLM is enabled, configured, and auto-generate title is on
         if (settingsRepository != null &&
             settingsRepository.getLLMEnabled() &&
-            settingsRepository.isLLMConfigured()
+            settingsRepository.isLLMConfigured() &&
+            settingsRepository.getAutoGenerateTitle()
         ) {
             try {
                 Log.d(TAG, "Generating title using LLM...")

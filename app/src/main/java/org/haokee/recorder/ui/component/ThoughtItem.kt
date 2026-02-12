@@ -134,8 +134,6 @@ fun TranscribedThoughtItem(
                     text = thought.content ?: "",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(start = 36.dp)
                 )
 
@@ -423,8 +421,6 @@ fun ExpiredThoughtItem(
                         text = thought.content,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(start = 36.dp)
                     )
                 }
